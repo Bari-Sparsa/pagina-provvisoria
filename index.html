@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#000000">
+<title>barisparsa.it</title>
+<style>
+:root { --rosa:#FFDCDE; --rosso:#FF3333; --lime:#EAFF9C; }
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; background:#000; }
+body {
+  margin: 0; min-height: 100svh; background: #000; color: var(--rosa);
+  font: 1rem/1.4 system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  display: grid; place-items: center; text-align: center;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+main { display: grid; justify-items: center; gap: clamp(20px, 5svh, 40px); }
+svg { width: min(60vw, 38svh, 300px); height: auto; overflow: visible; }
+rect { fill: var(--rosa); opacity: .1; animation: onda 5.2s ease-in-out infinite; animation-delay: calc(var(--i) * .16s); }
+@keyframes onda {
+  0%   { opacity: .1; fill: var(--rosa); }
+  10%  { opacity: 1;  fill: var(--rosso); }
+  28%  { opacity: 1;  fill: var(--lime); }
+  50%  { opacity: .1; fill: var(--rosa); }
+  100% { opacity: .1; fill: var(--rosa); }
+}
+h1 { margin: 0; font-size: clamp(2rem, 9vw, 3.6rem); font-weight: 900; letter-spacing: -.03em; line-height: 1; }
+p { margin: .6rem 0 0; font-size: clamp(.8rem, 2.8vw, 1rem); letter-spacing: .24em; text-transform: uppercase; opacity: .75; }
+p::after { content: "_"; animation: lampeggia 1s steps(1) infinite; }
+@keyframes lampeggia { 50% { opacity: 0; } }
+button {
+  position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+  font: inherit; font-size: .8rem; color: var(--rosa); background: transparent;
+  border: 1px solid rgba(255,220,222,.4); border-radius: 999px; padding: .5rem .9rem; min-height: 44px; cursor: pointer;
+}
+button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.fermo rect, .fermo p::after { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  rect { animation: none; opacity: 1; fill: var(--rosa); }
+  p::after { animation: none; }
+  button { display: none; }
+}
+</style>
+</head>
+<body>
+<main>
+  <svg viewBox="0 0 457.99 479.44" role="img" aria-label="Il simbolo di Bari Sparsa che si accende cella per cella">
+    <rect style="--i:0" x="240.19" y="0" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:1" x="269.73" y="26.07" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:2" x="301.02" y="50.4" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:3" x="304.17" y="125.74" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:4" x="347.63" y="158.76" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:5" x="368.48" y="186.57" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:6" x="385.87" y="226.55" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:7" x="114.72" y="71.86" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:8" x="398.03" y="264.79" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:9" x="282.77" y="219.16" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:10" x="74.74" y="99.67" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:11" x="225.41" y="194.82" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:12" x="111.24" y="146.6" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:13" x="308.84" y="273.04" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:14" x="398.03" y="346.48" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:15" x="309.32" y="340.9" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:16" x="112.32" y="231.11" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:17" x="18.44" y="212.3" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:18" x="336.07" y="419.48" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:19" x="207.12" y="419.48" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:20" x="0" y="318.67" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:21" x="36.5" y="348.22" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:22" x="114.72" y="419.48" width="59.97" height="59.97" rx="6.08"/>
+    <rect style="--i:23" x="57.36" y="395.15" width="59.97" height="59.97" rx="6.08"/>
+  </svg>
+  <div>
+    <h1>barisparsa.it</h1>
+    <p>work in progress</p>
+  </div>
+</main>
+<button type="button" id="pausa" aria-pressed="false">Pausa</button>
+<script>
+  var b = document.getElementById('pausa');
+  b.addEventListener('click', function () {
+    var fermo = document.body.classList.toggle('fermo');
+    b.setAttribute('aria-pressed', fermo);
+    b.textContent = fermo ? 'Riprendi' : 'Pausa';
+  });
+</script>
+</body>
+</html>
