@@ -314,6 +314,7 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
 </div>
 <div popover id="menu">
   <button type="button" id="m-pdf">Scarica il PDF per la riunione</button>
+  <button type="button" id="m-bug">Segnala un bug</button>
   <button type="button" id="m-esci">Esci</button>
 </div>
 <button class="piu" id="b-piu" aria-label="Aggiungi" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg></button>
@@ -337,11 +338,26 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
     </div>
     <div data-tipo="idee" style="display:contents" hidden>
       <label class="campo">L'idea<textarea id="i-testo" maxlength="2000"></textarea></label>
+      <div class="campo" style="gap:8px"><span>Reference, se c'è</span><div class="agganci" id="i-refs" style="margin:0"></div></div>
     </div>
     <div class="avviso" id="avviso-foglio" role="status" hidden></div>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button type="button" class="btn" id="b-annulla">Annulla</button>
       <button class="btn primo" id="b-salva" value="salva">Aggiungi</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="d-bug" aria-label="Segnala un bug">
+  <form class="foglio" id="m-bug-form">
+    <div class="maniglia"></div>
+    <div class="tit"><span class="dom">Qualcosa non va?</span><h2 class="banda">Segnala un bug</h2></div>
+    <label class="campo">Cosa stavi facendo e cosa è andato storto<textarea id="bug-testo" maxlength="240"></textarea></label>
+    <p style="margin:0;color:var(--tenue);font-weight:600;font-size:14px">Diventa un compito per Giuseppe, che lo sistema.</p>
+    <div class="avviso" id="avviso-bug" role="status" hidden></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" class="btn" id="bug-annulla">Annulla</button>
+      <button class="btn primo">Invia</button>
     </div>
   </form>
 </dialog>
@@ -471,6 +487,7 @@ function disegnaSchede(){
       k==="mio"?"Mio":SCHEDE[k], conta[k]?el("b",null,String(conta[k])):null)),
     el("div",{class:"lato azioni-lato"},
       el("button",{type:"button",class:"btn",onclick:scaricaPdf},"PDF riunione"),
+      el("button",{type:"button",class:"link",onclick:apriBug},"Segnala un bug"),
       el("button",{type:"button",class:"btn",onclick:()=>sb.auth.signOut()},"Esci")));
 }
 
@@ -642,9 +659,17 @@ function disegnaAg(){
     tessera(r.da),el("span",{class:"ag-testo"},r.testo))):
     [el("div",{class:"vuoto"},dati.reference.length?"Nessuna reference corrisponde.":"Non ci sono ancora reference: aggiungine una col +.")]));
 }
+// idea null: si sta scrivendo l'idea nel foglio, e le scelte restano lì finché non si aggiunge
+let refsNuova=new Set();
+function disegnaRefsNuova(){
+  const refs=[...refsNuova].map(id=>dati.reference.find(r=>r.id===id)).filter(Boolean);
+  $("i-refs").replaceChildren(...refs.map(r=>el("span",{class:"aggancio",title:r.testo},corto(r.testo))),
+    el("button",{type:"button",class:"mini",onclick:()=>apriAggancia(null)},refs.length?"Cambia":"+ Reference"));
+}
 function apriAggancia(idea){
-  ideaAg=idea;sceltiAg=new Set(idea.refs||[]);$("ag-cerca").value="";
-  $("ag-testa").replaceChildren(tit("Cosa la ispira?","Aggancia reference"),el("p",{class:"ag-idea"},idea.testo));
+  ideaAg=idea;sceltiAg=new Set(idea?idea.refs||[]:refsNuova);$("ag-cerca").value="";
+  const testo=idea?idea.testo:$("i-testo").value.trim();
+  $("ag-testa").replaceChildren(tit("Cosa la ispira?","Aggancia reference"),testo?el("p",{class:"ag-idea"},testo):null);
   disegnaAg();$("d-aggancia").showModal();
 }
 let primaVolta=true;
@@ -681,6 +706,7 @@ $("b-piu").addEventListener("click",()=>{
   document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
   $("m-nuovo").reset();document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
   if(vista==="squadra"&&filtro)$("t-chi").querySelector(`[value="${filtro}"]`).checked=true;
+  refsNuova=new Set();disegnaRefsNuova();
   $("foglio").showModal();
 });
 $("b-annulla").addEventListener("click",()=>$("foglio").close());
@@ -689,7 +715,8 @@ $("ag-annulla").addEventListener("click",()=>$("d-aggancia").close());
 $("d-aggancia").addEventListener("click",e=>{if(e.target===$("d-aggancia"))$("d-aggancia").close()});
 $("m-aggancia").addEventListener("submit",e=>{
   e.preventDefault();$("d-aggancia").close();
-  cambia("idee",ideaAg,{refs:[...sceltiAg].filter(id=>dati.reference.some(r=>r.id===id))});
+  const refs=[...sceltiAg].filter(id=>dati.reference.some(r=>r.id===id));
+  if(ideaAg)cambia("idee",ideaAg,{refs});else{refsNuova=new Set(refs);disegnaRefsNuova()}
 });
 $("foglio").addEventListener("click",e=>{if(e.target===$("foglio"))$("foglio").close()});
 function avvisoFoglio(t){const a=$("avviso-foglio");a.textContent=t;a.hidden=false}
@@ -709,9 +736,24 @@ $("m-nuovo").addEventListener("submit",async e=>{
   }else{
     const testo=$("i-testo").value.trim();
     if(!testo)return avvisoFoglio("Scrivi l'idea.");
-    ok=await aggiungi("idee",{testo,discussa:false});
+    ok=await aggiungi("idee",{testo,discussa:false,refs:[...refsNuova].filter(id=>dati.reference.some(r=>r.id===id))});
   }
   if(ok){$("foglio").close();const dove=t==="task"?($("t-chi").querySelector("input:checked")&&vista==="mio"?"mio":"squadra"):t;if(dove!==vista&&vista!=="mio")vai(dove)}
+});
+
+// ── segnala un bug: diventa un compito per Giuseppe, con la scheda e il tipo di schermo per ritrovarlo ──
+function apriBug(){$("m-bug-form").reset();$("avviso-bug").hidden=true;$("d-bug").showModal()}
+$("m-bug").addEventListener("click",()=>{$("menu").hidePopover();apriBug()});
+$("bug-annulla").addEventListener("click",()=>$("d-bug").close());
+$("d-bug").addEventListener("click",e=>{if(e.target===$("d-bug"))$("d-bug").close()});
+$("m-bug-form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const testo=$("bug-testo").value.trim();
+  if(!testo){const a=$("avviso-bug");a.textContent="Scrivi cosa è successo.";a.hidden=false;return}
+  const dove=`${SCHEDE[vista]}, ${matchMedia("(pointer: coarse)").matches?"telefono":"computer"}`;
+  if(await aggiungi("task",{cosa:`Bug: ${testo} [${dove}]`.slice(0,300),chi:["Giuseppe"],entro:null,fatto:false})){
+    $("d-bug").close();avvisa("Grazie: è un compito per Giuseppe.");
+  }
 });
 
 // ── la brutta copia dell'appunto: si salva da sola finché non la si fissa; la vede solo chi la scrive ──
@@ -727,38 +769,81 @@ appunti.addEventListener("input",()=>{
 // ── il PDF da girare prima della riunione: idee e reference non ancora discusse, compiti aperti per persona ──
 // ponytail: i caratteri di serie di jsPDF coprono solo il Latin-1, emoji e simboli cadono. Se servono, va incorporato un font.
 const piano=s=>String(s||"").replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,"-").replace(/…/g,"...").replace(/[^\n\x20-\xFF]/g,"").trim();
+// il simbolo del logo, disegnato a blocchi come nella pagina (viewBox -40 -30 560 540, translate 70 e skewX -14)
+function simboloPdf(doc,x0,y0,largo){
+  const s=largo/560, t=Math.tan(14*Math.PI/180), w=59.97, pt=(x,y)=>[x0+(110+x-t*y)*s,y0+(y+30)*s];
+  const forma=stile=>BLOCCHI.forEach(([x,y])=>{const a=pt(x,y),b=pt(x+w,y),c=pt(x+w,y+w),d=pt(x,y+w);
+    doc.lines([[b[0]-a[0],b[1]-a[1]],[c[0]-b[0],c[1]-b[1]],[d[0]-c[0],d[1]-c[1]]],a[0],a[1],[1,1],stile,true)});
+  doc.setLineJoin("round");doc.setDrawColor(255,51,51);doc.setFillColor(255,51,51);doc.setLineWidth(30*s);forma("FD");
+  doc.setFillColor(234,255,156);forma("F");doc.setLineWidth(.2);
+}
 function componi(){
-  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}), L=18, W=174;
-  let y=52;
-  const posto=h=>{if(y+h>282){doc.addPage();y=22}};
-  const titolo=(t,n)=>{posto(22);doc.setFillColor(0);doc.rect(L,y-6.2,W,9,"F");doc.setFont("helvetica","bold");doc.setFontSize(12);
-    doc.setTextColor(255,220,222);doc.text(t.toUpperCase(),L+3,y);doc.text(String(n),L+W-3,y,{align:"right"});doc.setTextColor(0);y+=11};
-  const voce=(testo,sotto,link)=>{
-    doc.setFont("helvetica","normal");doc.setFontSize(11);
-    const righe=doc.splitTextToSize(piano(testo)||"-",W-7);
-    posto(righe.length*5+(sotto?4.5:0)+(link?4.5:0)+3);
-    doc.rect(L,y-3.1,3,3);doc.text(righe,L+7,y);y+=righe.length*5;
-    doc.setFontSize(9);
-    if(link){doc.setTextColor(200,30,30);doc.textWithLink(doc.splitTextToSize(link,W-7)[0],L+7,y,{url:link});y+=4.5}
-    if(sotto){doc.setTextColor(110);doc.text(piano(sotto),L+7,y);y+=4.5}
-    doc.setTextColor(0);y+=3;
+  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}), L=16, W=178;
+  const INK=[0,0,0], TENUE=[106,67,71], ROSSO=[255,51,51], LIME=[234,255,156], CARTA=[255,245,245];
+  const rgb=h=>{h=h.length===4?"#"+[...h.slice(1)].map(c=>c+c).join(""):h;return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16))};
+  const pagina=()=>{doc.setFillColor(255,220,222);doc.rect(0,0,210,297,"F")};
+  let y=0;
+  const posto=h=>{if(y+h>280){doc.addPage();pagina();y=18}};
+  // la domanda in graziato dentro l'etichetta lime, sopra la fascia rossa con la scritta larga
+  const titolo=(dom,t,grande)=>{
+    const fs=grande?19:13, bh=grande?11.5:8.5, dh=grande?9:7.2;
+    posto(bh+dh+24);
+    doc.setFont("helvetica","bold");doc.setFontSize(fs);
+    const T=t.toUpperCase(), bw=doc.getTextWidth(T)+10, by=y+dh-1.6;
+    doc.setFillColor(...ROSSO);doc.rect(L,by,bw,bh,"F");doc.setTextColor(...INK);doc.text(T,L+5,by+bh*.73);
+    doc.setFont("times","italic");doc.setFontSize(grande?17:13.5);
+    doc.setFillColor(...LIME);doc.rect(L+4,y,doc.getTextWidth(dom)+7,dh,"F");doc.text(dom,L+7.5,y+dh*.74);
+    y=by+bh+6;
   };
-  const niente=t=>{doc.setFont("helvetica","italic");doc.setFontSize(10);doc.setTextColor(110);doc.text(t,L,y);doc.setTextColor(0);y+=9};
-  doc.setFillColor(255,51,51);doc.rect(0,0,210,38,"F");
-  doc.setFont("helvetica","bold");doc.setFontSize(26);doc.text("BARI SPARSA",L,19);
-  doc.setFontSize(12);doc.text("Verso la riunione - "+oggi().split("-").reverse().join("/"),L,29);
+  // la tessera di una persona: il suo colore, con l'iniziale
+  const tessera=(n,x,yy,d)=>{const p=P(n);doc.setFillColor(...rgb(p.c));doc.roundedRect(x,yy,d,d,1.6,1.6,"F");
+    doc.setTextColor(...rgb(p.f));doc.setFont("helvetica","bold");doc.setFontSize(d*2.1);doc.text(String(n||"?")[0].toUpperCase(),x+d/2,yy+d*.7,{align:"center"})};
+  const voce=({testo,da,sotto,link,refs,spunta,tardi})=>{
+    const X=L+13, TW=W-18;
+    doc.setFont("helvetica","bold");doc.setFontSize(10.5);
+    const righe=doc.splitTextToSize(piano(testo)||"-",TW-(tardi?22:0)), linee=[];
+    if(link)linee.push({t:doc.splitTextToSize(link,TW)[0],url:link,c:[200,30,30]});
+    (refs||[]).forEach(r=>{const u=indirizzo(r.link);linee.push({t:"Reference: "+piano(corto(r.testo))+(u?"  ("+u.hostname.replace(/^www\./,"")+")":""),url:u&&u.href,c:INK,b:true})});
+    if(sotto)linee.push({t:piano(sotto),c:TENUE});
+    const h=5.5+righe.length*4.6+linee.length*4.3+2;
+    posto(h+2.5);
+    doc.setFillColor(...CARTA);doc.roundedRect(L,y,W,h,2.5,2.5,"F");
+    if(spunta){doc.setDrawColor(...INK);doc.setLineWidth(.5);doc.roundedRect(L+4.4,y+3.3,4.4,4.4,1,1,"S");doc.setLineWidth(.2)}
+    else if(da)tessera(da,L+4,y+3,6.2);
+    if(tardi){doc.setFillColor(...ROSSO);doc.roundedRect(L+W-25,y+3,21,5,1,1,"F");doc.setTextColor(...INK);doc.setFont("helvetica","bold");doc.setFontSize(6.5);doc.text("IN RITARDO",L+W-14.5,y+6.4,{align:"center"});doc.setFontSize(10.5)}
+    let yy=y+7.2;doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.setTextColor(...INK);doc.text(righe,X,yy);yy+=righe.length*4.6;
+    doc.setFontSize(8.5);
+    for(const r of linee){doc.setFont("helvetica",r.b?"bold":"normal");doc.setTextColor(...r.c);
+      r.url?doc.textWithLink(r.t,X,yy,{url:r.url}):doc.text(r.t,X,yy);yy+=4.3}
+    y+=h+2.5;
+  };
+  const niente=t=>{posto(10);doc.setFont("times","italic");doc.setFontSize(11.5);doc.setTextColor(...TENUE);doc.text(t,L+2,y+3);y+=11};
+  const chiE=v=>[v.da,giorno(v.creato)].filter(Boolean).join("  ·  ");
+
+  pagina();
+  simboloPdf(doc,140,8,58);
+  doc.setTextColor(...INK);doc.setFont("helvetica","bold");doc.setFontSize(40);doc.text("BARI",L,30);
+  doc.setFont("helvetica","bolditalic");doc.text("SPARSA",L,45);
+  y=58;titolo("Cosa portiamo?","Verso la riunione",true);
   const idee=nuove("idee").sort(recenti), ref=nuove("reference").sort(recenti), comp=aperti();
-  titolo("Idee da discutere",idee.length);
-  idee.length?idee.forEach(v=>voce(v.testo,[v.da,giorno(v.creato)].filter(Boolean).join(" - "))):niente("Nessuna idea nuova.");
-  y+=4;titolo("Reference nuove",ref.length);
-  ref.length?ref.forEach(v=>voce(v.testo,[v.da,giorno(v.creato)].filter(Boolean).join(" - "),(indirizzo(v.link)||{}).href)):niente("Nessuna reference nuova.");
-  y+=4;titolo("Compiti aperti",comp.length);
+  doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.setTextColor(...TENUE);
+  doc.text(`${oggi().split("-").reverse().join("/")}  ·  ${idee.length} idee  ·  ${ref.length} reference  ·  ${comp.length} compiti aperti`,L,y);y+=10;
+
+  titolo("E se...?",`Idee da discutere  ${idee.length}`);
+  idee.length?idee.forEach(v=>voce({testo:v.testo,da:v.da,sotto:chiE(v),refs:(v.refs||[]).map(id=>dati.reference.find(r=>r.id===id)).filter(Boolean)})):niente("Nessuna idea nuova.");
+  y+=4;titolo("Cosa avete visto?",`Reference nuove  ${ref.length}`);
+  ref.length?ref.forEach(v=>voce({testo:v.testo,da:v.da,sotto:chiE(v),link:(indirizzo(v.link)||{}).href})):niente("Nessuna reference nuova.");
+  y+=4;titolo("Chi fa cosa?",`Compiti aperti  ${comp.length}`);
   if(!comp.length)niente("Nessun compito aperto.");
   for(const p of NOMI){
     const miei=comp.filter(t=>(t.chi||[]).includes(p)).sort(perScadenza); if(!miei.length)continue;
-    posto(16);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text(p.toUpperCase(),L,y);y+=6;
-    miei.forEach(t=>voce(t.cosa,[t.entro&&"entro il "+giorno(t.entro),t.da&&"assegnato da "+t.da].filter(Boolean).join(" - ")));
+    posto(22);tessera(p,L,y,6.5);doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...INK);doc.text(p.toUpperCase(),L+9,y+5);y+=10;
+    miei.forEach(t=>voce({testo:t.cosa,spunta:true,tardi:t.entro&&t.entro<oggi(),sotto:[t.entro&&"entro il "+giorno(t.entro),t.da&&"da "+t.da].filter(Boolean).join("  ·  ")}));
+    y+=2;
   }
+  const n=doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont("helvetica","bold");doc.setFontSize(7.5);doc.setTextColor(...TENUE);
+    doc.text("BARI SPARSA  ·  GESTIONE INTERNA",L,290);doc.text(`${i} / ${n}`,L+W,290,{align:"right"})}
   return doc;
 }
 function scaricaPdf(){
