@@ -6,6 +6,10 @@
 <meta name="theme-color" content="#FFDCDE" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D0708" media="(prefers-color-scheme: dark)">
 <title>Bari Sparsa — Gestione interna</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icona-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bari Sparsa">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=Instrument+Serif:ital@0;1&display=swap">
@@ -428,7 +432,7 @@ function aggiorna(cambiaVista){
   if(ridotto||!document.startViewTransition||(scrive&&!cambiaVista)){disegna();return}
   if(cambiaVista)document.documentElement.classList.add("cambio");
   const t=document.startViewTransition(disegna);
-  t.ready.catch(()=>{});t.finished.catch(()=>{}).finally(()=>document.documentElement.classList.remove("cambio"));
+  t.ready.catch(()=>{});t.updateCallbackDone.catch(()=>{});t.finished.catch(()=>{}).finally(()=>document.documentElement.classList.remove("cambio"));
 }
 function vai(k){if(k===vista)return;vista=k;filtro="";history.replaceState(null,"","#"+k);aggiorna(true);scrollTo({top:0})}
 
@@ -487,6 +491,26 @@ const appunti=el("textarea",{class:"area",id:"appunti",placeholder:"Scrivi qui. 
 const salvato=el("div",{class:"salvato",role:"status"});
 const bloccoAppunti=el("section",{class:"blocco"},tit("Solo per te.","Appunti"),appunti,salvato);
 
+// ── la prima volta dal telefono: suggerisce di metterla nella schermata Home (una volta per telefono) ──
+const HOME="bs-home-visto";
+let installa=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();installa=e;if(vista==="mio"&&$("v-app")&&!$("v-app").hidden)aggiorna()});
+function homeVisto(){try{return !!localStorage.getItem(HOME)}catch(e){return true}}
+function chiudiHome(){try{localStorage.setItem(HOME,"1")}catch(e){}aggiorna()}
+function bloccoHome(){
+  const app=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  if(app||!matchMedia("(pointer: coarse)").matches||homeVisto())return null;
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  return el("section",{class:"blocco carta"},
+    tit("Un'app? Magari.","Mettila in Home"),
+    el("p",{style:"margin:0;font-weight:600"},"Non abbiamo i soldi per un'app, facciamoci andare bene questa. Mettila nella schermata Home e si apre come se lo fosse."),
+    installa?null:el("p",{style:"margin:0;color:var(--tenue);font-weight:600;font-size:14px"},
+      ios?"Tocca Condividi (il quadrato con la freccia in su), poi «Aggiungi alla schermata Home».":"Apri il menu del browser (i tre puntini) e scegli «Aggiungi a schermata Home» o «Installa app»."),
+    el("div",{style:"display:flex;gap:10px;justify-content:flex-end"},
+      el("button",{type:"button",class:"btn",onclick:chiudiHome},installa?"Non ora":"Fatto"),
+      installa?el("button",{type:"button",class:"btn primo",onclick:async()=>{installa.prompt();await installa.userChoice.catch(()=>{});installa=null;chiudiHome()}},"Aggiungi alla Home"):null));
+}
+
 function vistaMio(){
   const miei=aperti().filter(t=>(t.chi||[]).includes(io)).sort(perScadenza);
   const tardi=miei.filter(t=>t.entro&&t.entro<oggi()).length;
@@ -495,6 +519,7 @@ function vistaMio(){
     .filter(v=>v.da!==io&&String(v.creato)>prima).sort(recenti):[];
   const p=P(io);
   return [
+    bloccoHome(),
     el("div",{class:"ciao"},tessera(io),el("div",null,el("h1",null,"Ciao "+io),
       el("p",null,miei.length?`${miei.length===1?"Hai 1 compito aperto":`Hai ${miei.length} compiti aperti`}${tardi?`, ${tardi} in ritardo`:""}.`:"Niente da fare per te. Bel momento."))),
     el("div",{class:"colonne"},
