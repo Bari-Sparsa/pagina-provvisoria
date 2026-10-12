@@ -210,6 +210,14 @@ dialog:not([open])::backdrop{opacity:0}
 .scegli label{display:flex;align-items:center;gap:8px;border:2px solid var(--ink);border-radius:12px;padding:5px 12px 5px 5px;font-weight:800;cursor:pointer;
   transition:background var(--t1) var(--e)}
 .scegli label .tessera{--d:30px}
+.scegli.colonna{flex-direction:column;flex-wrap:nowrap;max-height:46dvh;overflow:auto;padding:2px}
+.scegli.colonna label{align-items:flex-start;padding:7px 12px 7px 7px}
+.ag-testo{font-weight:600;white-space:pre-wrap;line-height:1.35;padding-top:4px}
+.ag-idea{margin:0;font-weight:700;white-space:pre-wrap;max-height:5.5em;overflow:hidden}
+.cerca{width:100%;margin:0 0 14px}
+.agganci{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.aggancio{border:1.5px solid #000;border-radius:9px;padding:5px 9px;font:700 12px/1.2 var(--largo);background:var(--lime);color:#000;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
 .scegli input{position:absolute;opacity:0;pointer-events:none}
 .scegli label:has(input:checked){background:var(--ink);color:var(--fondo)}
 .scegli label:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:2px}
@@ -338,6 +346,19 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
   </form>
 </dialog>
 
+<dialog id="d-aggancia" aria-label="Aggancia reference">
+  <form class="foglio" id="m-aggancia">
+    <div class="maniglia"></div>
+    <div id="ag-testa" style="display:flex;flex-direction:column;gap:12px"></div>
+    <input type="search" class="area" id="ag-cerca" placeholder="Cerca fra le reference…" autocomplete="off" aria-label="Cerca fra le reference">
+    <div class="scegli colonna" id="ag-lista"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" class="btn" id="ag-annulla">Annulla</button>
+      <button class="btn primo">Aggancia</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -438,7 +459,7 @@ function aggiorna(cambiaVista){
   const t=document.startViewTransition(disegna);
   t.ready.catch(()=>{});t.updateCallbackDone.catch(()=>{});t.finished.catch(()=>{}).finally(()=>document.documentElement.classList.remove("cambio"));
 }
-function vai(k){if(k===vista)return;vista=k;filtro="";history.replaceState(null,"","#"+k);aggiorna(true);scrollTo({top:0})}
+function vai(k){if(k===vista)return;vista=k;filtro="";cerca.value="";history.replaceState(null,"","#"+k);aggiorna(true);scrollTo({top:0})}
 
 const ICONA_SCHEDA={mio:null,squadra:"comunita",reference:"digital",idee:"creativita"};
 function disegnaSchede(){
@@ -475,7 +496,8 @@ function rigaVoce(k,v,pre){
       el("div",{class:"nome"},v.testo),
       el("div",{class:"meta"},
         u&&el("a",{href:u.href,target:"_blank",rel:"noopener noreferrer"},u.hostname.replace(/^www\./,"")+" ↗"),
-        el("span",null,[v.da,giorno(v.creato)].filter(Boolean).join(" · ")))),
+        el("span",null,[v.da,giorno(v.creato)].filter(Boolean).join(" · "))),
+      k==="idee"?agganci(v):null),
     el("div",{class:"gesti"},
       el("button",{type:"button",class:"mini","aria-pressed":String(!!v.discussa),onclick:()=>cambia(k,v,{discussa:!v.discussa})},v.discussa?"Discussa":"Discussa?"),
       elimina(k,v)));
@@ -586,18 +608,51 @@ function vistaSquadra(){
     fatti.length?el("details",null,el("summary",null,`Fatti (${fatti.length})`),lista(fatti.map(t=>rigaTask(t,"f",{tutti:true})),"")):null,
   ];
 }
+// ── la ricerca in idee e reference: il campo è sempre lo stesso, così ridisegnando non perde il fuoco ──
+const cerca=el("input",{type:"search",class:"area cerca",autocomplete:"off","aria-label":"Cerca",oninput:()=>disegna()});
+const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const trova=(v,q)=>!q||norm([v.testo,v.link,v.da].join(" ")).includes(norm(q));
 function vistaVoci(k){
-  const v=[...dati[k]].sort((a,b)=>(!!a.discussa-!!b.discussa)||recenti(a,b));
+  const q=cerca.value.trim();
+  cerca.placeholder=k==="reference"?"Cerca fra le reference…":"Cerca fra le idee…";
+  const v=[...dati[k]].filter(x=>trova(x,q)).sort((a,b)=>(!!a.discussa-!!b.discussa)||recenti(a,b));
   return [
     k==="reference"?tit("Cosa avete visto?","Reference","h1"):tit("E se...?","Idee","h1"),
-    caricoOVuoto(k,v.map(x=>rigaVoce(k,x,k[0])),VUOTO[k]),
+    dati[k].length?cerca:null,
+    caricoOVuoto(k,v.map(x=>rigaVoce(k,x,k[0])),q?`Niente che corrisponda a «${q}».`:VUOTO[k]),
   ];
+}
+
+// ── le reference agganciate a un'idea (idee.refs): si toccano per aprire il link ──
+const corto=s=>{s=String(s||"").replace(/\s+/g," ").trim();return s.length>42?s.slice(0,40)+"…":s};
+function agganci(idea){
+  const refs=(idea.refs||[]).map(id=>dati.reference.find(r=>r.id===id)).filter(Boolean);
+  return el("div",{class:"agganci"},
+    refs.map(r=>el("button",{type:"button",class:"aggancio",title:r.testo,onclick:()=>{
+      const u=indirizzo(r.link);
+      if(u)open(u.href,"_blank","noopener");else{vai("reference");cerca.value=corto(r.testo).replace(/…$/,"");disegna()}
+    }},(indirizzo(r.link)?"↗ ":"")+corto(r.testo))),
+    el("button",{type:"button",class:"mini",onclick:()=>apriAggancia(idea)},refs.length?"Cambia reference":"+ Reference"));
+}
+let ideaAg=null, sceltiAg=new Set();
+function disegnaAg(){
+  const q=$("ag-cerca").value.trim(), rs=dati.reference.filter(r=>trova(r,q)).sort(recenti);
+  $("ag-lista").replaceChildren(...(rs.length?rs.map(r=>el("label",null,
+    el("input",{type:"checkbox",value:r.id,checked:sceltiAg.has(r.id),onchange:e=>e.target.checked?sceltiAg.add(r.id):sceltiAg.delete(r.id)}),
+    tessera(r.da),el("span",{class:"ag-testo"},r.testo))):
+    [el("div",{class:"vuoto"},dati.reference.length?"Nessuna reference corrisponde.":"Non ci sono ancora reference: aggiungine una col +.")]));
+}
+function apriAggancia(idea){
+  ideaAg=idea;sceltiAg=new Set(idea.refs||[]);$("ag-cerca").value="";
+  $("ag-testa").replaceChildren(tit("Cosa la ispira?","Aggancia reference"),el("p",{class:"ag-idea"},idea.testo));
+  disegnaAg();$("d-aggancia").showModal();
 }
 let primaVolta=true;
 function disegna(){
   disegnaSchede();
-  const m=$("main");
+  const m=$("main"), fuoco=document.activeElement===cerca, pos=cerca.selectionStart;
   m.replaceChildren(...(vista==="mio"?vistaMio():vista==="squadra"?vistaSquadra():vistaVoci(vista)).filter(Boolean));
+  if(fuoco&&cerca.isConnected){cerca.focus();cerca.setSelectionRange(pos,pos)}
   if(primaVolta&&pronto.task){primaVolta=false;m.classList.add("entra");[...m.children].forEach((c,i)=>c.style.setProperty("--i",i));
     setTimeout(()=>m.classList.remove("entra"),900)}
 }
@@ -629,6 +684,13 @@ $("b-piu").addEventListener("click",()=>{
   $("foglio").showModal();
 });
 $("b-annulla").addEventListener("click",()=>$("foglio").close());
+$("ag-cerca").addEventListener("input",disegnaAg);
+$("ag-annulla").addEventListener("click",()=>$("d-aggancia").close());
+$("d-aggancia").addEventListener("click",e=>{if(e.target===$("d-aggancia"))$("d-aggancia").close()});
+$("m-aggancia").addEventListener("submit",e=>{
+  e.preventDefault();$("d-aggancia").close();
+  cambia("idee",ideaAg,{refs:[...sceltiAg].filter(id=>dati.reference.some(r=>r.id===id))});
+});
 $("foglio").addEventListener("click",e=>{if(e.target===$("foglio"))$("foglio").close()});
 function avvisoFoglio(t){const a=$("avviso-foglio");a.textContent=t;a.hidden=false}
 $("m-nuovo").addEventListener("submit",async e=>{
