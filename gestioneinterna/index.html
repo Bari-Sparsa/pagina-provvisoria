@@ -181,7 +181,7 @@ textarea{resize:vertical;min-height:96px}
 .ciao p{margin:6px 0 0;color:var(--tenue);font-weight:600}
 .novita .riga{align-items:center}
 .tipo{font:800 10px/1 var(--largo);font-stretch:118%;text-transform:uppercase;letter-spacing:.05em;background:var(--ink);color:var(--fondo);padding:4px 6px;border-radius:5px}
-.salvato{font-size:13px;color:var(--tenue);font-weight:600;min-height:20px;margin-top:6px;transition:opacity var(--t2) var(--e)}
+.salvato{font-size:13px;color:var(--tenue);font-weight:600;min-height:20px;transition:opacity var(--t2) var(--e)}
 .persone{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px 18px;padding:2px 16px 6px;scrollbar-width:none}
 .persone::-webkit-scrollbar{display:none}
 .persona{scroll-snap-align:start;flex:none;display:flex;align-items:center;gap:9px;border:2px solid var(--ink);background:transparent;border-radius:14px;
@@ -384,7 +384,7 @@ const VUOTO={reference:"Qui finiscono le reference che vedete in giro: un link e
 const TIPI={task:"compito",reference:"reference",idee:"idea"};
 
 const dati={task:[],reference:[],idee:[]}, pronto={};
-let io="", uid="", prima=null, filtro="", vista=SCHEDE[location.hash.slice(1)]?location.hash.slice(1):"mio";
+let io="", uid="", prima=null, viste=new Set(), filtro="", vista=SCHEDE[location.hash.slice(1)]?location.hash.slice(1):"mio";
 const ridotto=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const $=id=>document.getElementById(id);
@@ -487,9 +487,35 @@ const lista=(righe,vuoto)=>righe.length?el("div",{class:"lista"},righe):el("div"
 const caricoOVuoto=(k,righe,vuoto)=>pronto[k]?lista(righe,vuoto):el("div",{class:"vuoto"},"Carico…");
 
 // ── le quattro viste ──
-const appunti=el("textarea",{class:"area",id:"appunti",placeholder:"Scrivi qui. Lo vedi solo tu, si salva da solo.","aria-label":"I miei appunti",rows:"6"});
+const appunti=el("textarea",{class:"area",id:"appunti",placeholder:"Scrivi qui. Lo vedi solo tu. Con «Fissa» diventa un appunto e non cambia più.","aria-label":"Nuovo appunto",rows:"4"});
+const fissati=el("div");
+let note=[];
 const salvato=el("div",{class:"salvato",role:"status"});
-const bloccoAppunti=el("section",{class:"blocco"},tit("Solo per te.","Appunti"),appunti,salvato);
+const bloccoAppunti=el("section",{class:"blocco"},tit("Solo per te.","Appunti"),appunti,
+  el("div",{style:"display:flex;gap:14px;align-items:center;margin-top:8px"},
+    el("button",{type:"button",class:"btn primo",onclick:fissa},"Fissa"),salvato),fissati);
+const quandoNota=s=>new Date(s).toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"});
+function disegnaNote(){
+  fissati.replaceChildren(note.length?el("div",{class:"lista",style:"margin-top:14px"},note.map(n=>el("div",{class:"riga"},
+    el("div",{class:"corpo"},el("div",{class:"nome",style:"white-space:pre-wrap"},n.testo),el("div",{class:"meta"},el("span",null,quandoNota(n.creato)))),
+    el("div",{class:"gesti"},el("button",{type:"button",class:"via","aria-label":"Elimina",onclick:e=>{
+      const b=e.currentTarget;
+      if(!b.dataset.sicuro){b.dataset.sicuro="1";b.textContent="Elimino?";setTimeout(()=>{delete b.dataset.sicuro;b.textContent="×"},3500);return}
+      salvaNote(note.filter(x=>x.id!==n.id));
+    }},"×"))))):"");
+}
+// un appunto fissato non si modifica più: si può solo eliminare
+async function salvaNote(nuove,extra={}){
+  const vecchie=note;note=nuove;disegnaNote();
+  const {error}=await sb.from("personale").upsert({user_id:uid,note,...extra});
+  if(error){note=vecchie;disegnaNote();avvisa("Non è stato salvato. Riprova fra qualche secondo.");return false}
+  return true;
+}
+async function fissa(){
+  const testo=appunti.value.trim(); if(!testo){appunti.focus();return}
+  clearTimeout(appuntiTimer);
+  if(await salvaNote([{id:crypto.randomUUID(),testo,creato:new Date().toISOString()},...note],{appunti:""})){appunti.value="";salvato.textContent="Fissato."}
+}
 
 // ── la prima volta dal telefono: suggerisce di metterla nella schermata Home (una volta per telefono) ──
 const HOME="bs-home-visto";
@@ -516,7 +542,7 @@ function vistaMio(){
   const tardi=miei.filter(t=>t.entro&&t.entro<oggi()).length;
   const dati_da_me=dati.task.filter(t=>t.da===io&&(t.chi||[]).some(n=>n!==io)).sort((a,b)=>(a.fatto-b.fatto)||perScadenza(a,b));
   const novita=prima?[...dati.task.map(v=>({...v,k:"task"})),...dati.reference.map(v=>({...v,k:"reference"})),...dati.idee.map(v=>({...v,k:"idee"}))]
-    .filter(v=>v.da!==io&&String(v.creato)>prima).sort(recenti):[];
+    .filter(v=>v.da!==io&&String(v.creato)>prima&&!viste.has(v.k+":"+v.id)).sort(recenti):[];
   const p=P(io);
   return [
     bloccoHome(),
@@ -532,9 +558,15 @@ function vistaMio(){
     novita.length?el("section",{class:"blocco novita"},tit("Nel frattempo?",`${novita.length} novità`),
       lista(novita.slice(0,12).map(v=>el("div",{class:"riga",style:`view-transition-name:n-${v.id}`},tessera(v.da),
         el("div",{class:"corpo"},el("div",{class:"nome"},v.cosa||v.testo),el("div",{class:"meta"},el("span",{class:"tipo"},TIPI[v.k]),el("span",null,"da "+v.da))),
-        el("button",{type:"button",class:"mini",onclick:()=>vai(v.k==="task"?"squadra":v.k)},"Apri"))),"")):null,
+        el("button",{type:"button",class:"mini",onclick:()=>apriNovita(v)},"Apri"))),"")):null,
         bloccoAppunti)),
   ];
+}
+// una novità aperta sparisce dalle novità di chi l'ha aperta (le viste stanno in personale, valgono su ogni telefono)
+function apriNovita(v){
+  viste.add(v.k+":"+v.id);
+  sb.from("personale").upsert({user_id:uid,viste:[...viste]}).then(()=>{});
+  vai(v.k==="task"?"squadra":v.k);
 }
 function vistaSquadra(){
   const tutti=aperti(), di=p=>tutti.filter(t=>(t.chi||[]).includes(p));
@@ -561,7 +593,7 @@ let primaVolta=true;
 function disegna(){
   disegnaSchede();
   const m=$("main");
-  m.replaceChildren(...(vista==="mio"?vistaMio():vista==="squadra"?vistaSquadra():vistaVoci(vista)));
+  m.replaceChildren(...(vista==="mio"?vistaMio():vista==="squadra"?vistaSquadra():vistaVoci(vista)).filter(Boolean));
   if(primaVolta&&pronto.task){primaVolta=false;m.classList.add("entra");[...m.children].forEach((c,i)=>c.style.setProperty("--i",i));
     setTimeout(()=>m.classList.remove("entra"),900)}
 }
@@ -616,13 +648,13 @@ $("m-nuovo").addEventListener("submit",async e=>{
   if(ok){$("foglio").close();const dove=t==="task"?($("t-chi").querySelector("input:checked")&&vista==="mio"?"mio":"squadra"):t;if(dove!==vista&&vista!=="mio")vai(dove)}
 });
 
-// ── gli appunti: si salvano da soli, li vede solo chi li scrive ──
+// ── la brutta copia dell'appunto: si salva da sola finché non la si fissa; la vede solo chi la scrive ──
 let appuntiTimer;
 appunti.addEventListener("input",()=>{
   salvato.textContent="…";clearTimeout(appuntiTimer);
   appuntiTimer=setTimeout(async()=>{
     const {error}=await sb.from("personale").upsert({user_id:uid,appunti:appunti.value});
-    salvato.textContent=error?"Non salvato: riprova fra poco.":"Salvato.";
+    salvato.textContent=error?"Non salvato: riprova fra poco.":"Bozza salvata.";
   },700);
 });
 
@@ -713,7 +745,7 @@ async function entra(){
   io=nome;uid=u.user.id;
   const p=P(io);$("b-io").replaceChildren(tessera(io));
   const {data:mia}=await sb.from("personale").select("*").maybeSingle();
-  prima=mia?.ultima_visita||null;appunti.value=mia?.appunti||"";
+  prima=mia?.ultima_visita||null;viste=new Set(mia?.viste||[]);appunti.value=mia?.appunti||"";note=Array.isArray(mia?.note)?mia.note:[];disegnaNote();
   sb.from("personale").upsert({user_id:uid,ultima_visita:new Date().toISOString()}).then(()=>{});
   stato("dentro");disegna();
   await Promise.all(Object.keys(dati).map(carica));
@@ -729,7 +761,7 @@ sb.auth.onAuthStateChange((ev,s)=>{
   if(ev==="PASSWORD_RECOVERY")daLink=true;
   if(s&&daLink){dentro=true;stato("fuori","","m-password")}
   else if(s&&!dentro){dentro=true;setTimeout(entra)}
-  else if(!s){dentro=false;sb.removeAllChannels();for(const k in dati){dati[k]=[];pronto[k]=false}primaVolta=true;stato("fuori")}
+  else if(!s){dentro=false;sb.removeAllChannels();for(const k in dati){dati[k]=[];pronto[k]=false}primaVolta=true;viste=new Set();stato("fuori")}
 });
 </script>
 </html>
