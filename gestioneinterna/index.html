@@ -87,7 +87,13 @@ details summary{cursor:pointer;font-weight:800;padding:6px 0}
   <div class="avviso" id="avviso-ingresso" role="status" hidden></div>
   <label>Email<input type="email" id="e-mail" required autocomplete="username"></label>
   <label>Password<input type="password" id="e-pw" required autocomplete="current-password"></label>
-  <div class="fila"><span></span><button class="btn primo">Entra</button></div>
+  <div class="fila"><button type="button" class="mini" id="b-dimenticata">Password dimenticata?</button><button class="btn primo">Entra</button></div>
+</form>
+
+<form class="modulo ingresso" id="m-password" hidden>
+  <div class="avviso" id="avviso-password" role="status" hidden></div>
+  <label>Scegli la tua password<input type="password" id="n-pw" required minlength="8" autocomplete="new-password"></label>
+  <div class="fila"><span>Almeno 8 caratteri.</span><button class="btn primo">Salva ed entra</button></div>
 </form>
 
 <div id="dentro" hidden>
@@ -132,6 +138,8 @@ details summary{cursor:pointer;font-weight:800;padding:6px 0}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 // Chiave pubblica per scelta: i dati li protegge il database (gestioneinterna.sql nel brain), non questa pagina.
+// arrivati dal link di invito o di recupero: prima si sceglie la password (si legge prima che il client pulisca l'indirizzo)
+let daLink=/type=(invite|recovery)/.test(location.hash);
 const sb=supabase.createClient("https://ehclovlvospxfaappksk.supabase.co","sb_publishable_jf5dkgBhIwiTq9UUyy6zNQ_EY7Z1N9U");
 const SQUADRA=["Giuseppe","Simone","Denise","Imma","Davide","Luca"];
 // le chiavi sono anche i nomi delle tabelle su Supabase
@@ -307,11 +315,24 @@ $("b-pdf").addEventListener("click",()=>{
   catch(e){avvisa("Il PDF non è stato scaricato. Riprova fra qualche secondo.")}
 });
 
-// l'ingresso: email e password, gli account li crea Peppe su Supabase
-function mostra(fuori,testo){
-  $("m-ingresso").hidden=!fuori;$("dentro").hidden=fuori;$("mano").hidden=fuori;
-  const a=$("avviso-ingresso");a.textContent=testo||"";a.hidden=!testo;
+// l'ingresso: email e password; gli inviti partono da Supabase e ognuno sceglie la sua password
+function mostra(fuori,testo,form="m-ingresso"){
+  $("m-ingresso").hidden=!fuori||form!=="m-ingresso";$("m-password").hidden=!fuori||form!=="m-password";
+  $("dentro").hidden=fuori;$("mano").hidden=fuori;
+  const a=$(form==="m-password"?"avviso-password":"avviso-ingresso");a.textContent=testo||"";a.hidden=!testo;
 }
+$("b-dimenticata").addEventListener("click",async()=>{
+  const email=$("e-mail").value.trim();
+  if(!email){mostra(true,"Scrivi la tua email qui sotto, poi riclicca «Password dimenticata?».");$("e-mail").focus();return}
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  mostra(true,error?"La mail non è partita. Riprova fra qualche minuto.":"Se l'indirizzo è della squadra, ti è arrivata una mail con il link per scegliere una password nuova.");
+});
+$("m-password").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const {error}=await sb.auth.updateUser({password:$("n-pw").value});
+  if(error){mostra(true,"La password non è stata salvata: prova con una più lunga o diversa.","m-password");return}
+  daLink=false;history.replaceState(null,"",location.pathname);entra();
+});
 $("m-ingresso").addEventListener("submit",async e=>{
   e.preventDefault();
   const {error}=await sb.auth.signInWithPassword({email:$("e-mail").value.trim(),password:$("e-pw").value});
@@ -335,7 +356,9 @@ async function entra(){
 }
 let dentro=false;
 sb.auth.onAuthStateChange((ev,s)=>{
-  if(s&&!dentro){dentro=true;setTimeout(entra)}
+  if(ev==="PASSWORD_RECOVERY")daLink=true;
+  if(s&&daLink){dentro=true;mostra(true,"","m-password")}
+  else if(s&&!dentro){dentro=true;setTimeout(entra)}
   else if(!s){dentro=false;db=false;sb.removeAllChannels();for(const k in SCHEDE){dati[k]=[];pronto[k]=false}mostra(true)}
 });
 </script>
