@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Bari Sparsa — Gestione interna</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<style>
+/* Layout: fascia rossa in testa con «chi sei» e il PDF, tre schede, in ogni scheda prima il modulo per aggiungere e sotto l'elenco. Colori delle tavole di Luca. */
+:root{
+  --fondo:#FFDCDE; --carta:#FFF3F3; --inchiostro:#000; --tenue:#6A4347; --riga:#E2BABE;
+  --rosso:#FF3333; --su-rosso:#000; --lime:#EAFF9C; --su-lime:#000;
+  --largo:"Archivo",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --fondo:#150B0C; --carta:#26171A; --inchiostro:#FFDCDE; --tenue:#C99DA2; --riga:#4C2E33; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --fondo:#150B0C; --carta:#26171A; --inchiostro:#FFDCDE; --tenue:#C99DA2; --riga:#4C2E33; color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--fondo);color:var(--inchiostro);font:16px/1.4 var(--largo);font-variant-numeric:tabular-nums;margin:0}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--inchiostro);outline-offset:2px}
+.t{font-stretch:125%;font-weight:900;text-transform:uppercase;letter-spacing:.01em;line-height:1}
+.dentro{max-width:860px;margin:0 auto}
+.testa{background:var(--rosso);color:var(--su-rosso);padding:22px 16px 18px}
+.testa .dentro{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+.testa h1{margin:0;font-size:clamp(28px,6vw,44px)}
+.testa p{margin:6px 0 0;font-weight:600}
+.mano{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.testa select,.testa .btn{border-color:var(--su-rosso);color:var(--su-rosso)}
+.testa select{background:var(--rosso)}
+.barra{padding:14px 16px 0}
+.gruppo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{border:2px solid var(--inchiostro);background:transparent;padding:6px 12px;font-weight:700;border-radius:0}
+.chip[aria-pressed="true"]{background:var(--inchiostro);color:var(--fondo)}
+.chip small{font-weight:600;opacity:.7;margin-left:5px}
+.schede .chip{font-stretch:125%;text-transform:uppercase;font-size:14px;font-weight:900;padding:8px 14px}
+.schede .chip[aria-pressed="true"]{background:var(--lime);color:var(--su-lime)}
+main{padding:16px 16px 60px}
+main section{display:flex;flex-direction:column;gap:14px}
+.avviso{background:var(--lime);color:var(--su-lime);padding:10px 14px;font-weight:700;margin-bottom:14px}
+.vuoto{border:2px dashed var(--riga);padding:28px 18px;text-align:center;color:var(--tenue);font-weight:600}
+.modulo{background:var(--carta);border:2px solid var(--inchiostro);padding:14px;display:flex;flex-direction:column;gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+label>input,label>select,label>textarea{font-size:16px;font-weight:500;text-transform:none;letter-spacing:0;padding:8px;border:2px solid var(--inchiostro);background:var(--fondo);border-radius:0;width:100%}
+textarea{resize:vertical;min-height:64px}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+legend{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:0;margin-bottom:4px}
+.spunta{flex-direction:row;align-items:center;gap:6px;font-size:15px;font-weight:700;text-transform:none;letter-spacing:0;border:2px solid var(--inchiostro);padding:5px 10px;cursor:pointer}
+.spunta:has(input:checked){background:var(--lime);color:var(--su-lime)}
+.fila{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.btn{border:2px solid var(--inchiostro);background:transparent;padding:8px 16px;font-weight:900;font-stretch:125%;text-transform:uppercase;font-size:13px}
+.btn.primo{background:var(--lime);color:var(--su-lime);border-color:var(--inchiostro)}
+.blocco h2{margin:0 0 6px;font-size:18px;display:flex;gap:10px;align-items:baseline}
+.blocco h2 small{font:600 13px var(--largo);text-transform:none;color:var(--tenue);letter-spacing:0}
+.riga{display:flex;gap:12px;align-items:flex-start;padding:11px 12px;background:var(--carta);border-bottom:1.5px solid var(--riga)}
+.riga input[type=checkbox]{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--rosso)}
+.corpo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.nome{font-weight:700;white-space:pre-wrap}
+.meta{display:flex;flex-wrap:wrap;gap:3px 10px;align-items:center;font-size:13px;color:var(--tenue);font-weight:600}
+.meta a{color:var(--inchiostro);font-weight:800}
+.tardi{background:var(--rosso);color:var(--su-rosso);padding:0 6px;font-weight:900;font-size:11px;text-transform:uppercase}
+.spenta .nome{opacity:.55}
+.fatta .nome{text-decoration:line-through;opacity:.55}
+.gesti{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;flex:none;max-width:45%}
+.mini{border:1.5px solid var(--inchiostro);background:transparent;padding:3px 8px;font-size:12px;font-weight:800}
+.mini[aria-pressed="true"]{background:var(--inchiostro);color:var(--fondo)}
+.mini.via[data-sicuro]{background:var(--rosso);color:var(--su-rosso)}
+details summary{cursor:pointer;font-weight:800;padding:6px 0}
+.ingresso{max-width:420px;margin:40px auto;padding:0 16px}
+.sono{font-weight:900;font-stretch:125%;text-transform:uppercase;font-size:14px}
+@media (prefers-reduced-motion:no-preference){ .chip,.riga,.mini{transition:background-color .12s} }
+</style>
+
+<header class="testa"><div class="dentro">
+  <div><h1 class="t">Bari Sparsa<br>Squadra</h1><p>Compiti, reference e idee, in un posto solo.</p></div>
+  <div class="mano" id="mano" hidden>
+    <span class="sono" id="sono"></span>
+    <button type="button" class="btn" id="b-pdf" hidden>PDF per la riunione</button>
+    <button type="button" class="btn" id="b-esci">Esci</button>
+  </div>
+</div></header>
+
+<form class="modulo ingresso" id="m-ingresso" hidden>
+  <div class="avviso" id="avviso-ingresso" role="status" hidden></div>
+  <label>Email<input type="email" id="e-mail" required autocomplete="username"></label>
+  <label>Password<input type="password" id="e-pw" required autocomplete="current-password"></label>
+  <div class="fila"><span></span><button class="btn primo">Entra</button></div>
+</form>
+
+<div id="dentro" hidden>
+<nav class="barra"><div class="dentro gruppo schede" id="schede" aria-label="Sezioni"></div></nav>
+
+<main><div class="dentro">
+  <div class="avviso" id="avviso" role="status" hidden></div>
+
+  <section id="s-task">
+    <form class="modulo" id="m-task">
+      <label>Cosa c'è da fare<input id="t-cosa" required maxlength="300" autocomplete="off"></label>
+      <fieldset id="t-chi"><legend>Per chi</legend></fieldset>
+      <div class="fila">
+        <label>Entro, se serve<input type="date" id="t-entro"></label>
+        <button class="btn primo">Assegna</button>
+      </div>
+    </form>
+    <div class="gruppo" id="t-filtro" aria-label="Filtra per persona"></div>
+    <div id="l-task"></div>
+  </section>
+
+  <section id="s-reference" hidden>
+    <form class="modulo" id="m-reference">
+      <label>Link, se c'è<input id="r-link" inputmode="url" placeholder="https://" autocomplete="off"></label>
+      <label>Mini descrizione: cos'è e perché ci serve<textarea id="r-testo" required maxlength="1000"></textarea></label>
+      <div class="fila"><span></span><button class="btn primo">Carica</button></div>
+    </form>
+    <div id="l-reference"></div>
+  </section>
+
+  <section id="s-idee" hidden>
+    <form class="modulo" id="m-idee">
+      <label>L'idea<textarea id="i-testo" required maxlength="2000"></textarea></label>
+      <div class="fila"><span></span><button class="btn primo">Aggiungi</button></div>
+    </form>
+    <div id="l-idee"></div>
+  </section>
+</div></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+// Chiave pubblica per scelta: i dati li protegge il database (gestioneinterna.sql nel brain), non questa pagina.
+const sb=supabase.createClient("https://ehclovlvospxfaappksk.supabase.co","sb_publishable_jf5dkgBhIwiTq9UUyy6zNQ_EY7Z1N9U");
+const SQUADRA=["Giuseppe","Simone","Denise","Imma","Davide","Luca"];
+// le chiavi sono anche i nomi delle tabelle su Supabase
+const SCHEDE={task:"Compiti",reference:"Reference",idee:"Idee"};
+const VUOTO={task:"Nessun compito aperto. Scrivine uno qui sopra e scegli per chi è.",
+  reference:"Qui finiscono le reference che vedete in giro: un link e due righe su cos'è.",
+  idee:"Nessuna idea ancora. Scrivi la prima qui sopra: la vedono tutti."};
+
+const dati={task:[],reference:[],idee:[]}, pronto={};
+let db=false, scrive=true, io="", filtro="", fattiAperti=false;
+let scheda=SCHEDE[location.hash.slice(1)]?location.hash.slice(1):"task";
+
+const $=id=>document.getElementById(id);
+function el(tag,attrs,...figli){
+  const n=document.createElement(tag);
+  for(const k in attrs||{}){const v=attrs[k];
+    if(k==="class")n.className=v; else if(k.startsWith("on"))n.addEventListener(k.slice(2),v);
+    else if(v===true)n.setAttribute(k,""); else if(v!==false&&v!=null)n.setAttribute(k,v);}
+  for(const f of figli.flat())if(f!=null&&f!==false)n.append(f);
+  return n;
+}
+const oggi=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const giorno=s=>s?s.slice(8,10)+"/"+s.slice(5,7):"";
+const recenti=(a,b)=>String(b.creato||"").localeCompare(String(a.creato||""));
+const perScadenza=(a,b)=>(a.entro||"9").localeCompare(b.entro||"9")||recenti(b,a);
+const aperti=()=>dati.task.filter(t=>!t.fatto);
+const nuove=k=>dati[k].filter(v=>!v.discussa);
+function indirizzo(s){
+  s=String(s||"").trim(); if(!s)return null;
+  try{const u=new URL(/^https?:\/\//i.test(s)?s:"https://"+s);return /^https?:$/.test(u.protocol)&&u.hostname.includes(".")?u:null}catch(e){return null}
+}
+function avvisa(testo){const a=$("avviso");a.textContent=testo||"";a.hidden=!testo}
+
+// una scrittura alla volta per documento
+const coda={};
+function scrivi(id,fn){
+  coda[id]=(coda[id]||Promise.resolve()).then(fn).then(r=>{if(r&&r.error)throw r.error;avvisa("")}).catch(()=>{
+    avvisa("Non è stato salvato. Riprova fra qualche secondo; se succede ancora, esci e rientra.");
+  });
+  return coda[id];
+}
+function aggiungi(k,d){
+  scrivi("nuovo-"+k,()=>sb.from(k).insert({...d,da:io}));
+  return true;
+}
+const cambia=(k,v,d)=>scrivi(v.id,()=>sb.from(k).update(d).eq("id",v.id));
+function elimina(k,v){
+  return el("button",{type:"button",class:"mini via","aria-label":"Elimina",onclick:e=>{
+    const b=e.currentTarget;
+    if(!b.dataset.sicuro){b.dataset.sicuro="1";b.textContent="Elimino?";setTimeout(()=>{delete b.dataset.sicuro;b.textContent="×"},3500);return}
+    scrivi(v.id,()=>sb.from(k).delete().eq("id",v.id));
+  }},"×");
+}
+
+function rigaTask(t,persona){
+  const altri=(t.chi||[]).filter(p=>p!==persona);
+  return el("div",{class:"riga"+(t.fatto?" fatta":"")},
+    el("input",{type:"checkbox",checked:!!t.fatto,disabled:!scrive,"aria-label":"Fatto: "+t.cosa,onchange:e=>cambia("task",t,{fatto:e.target.checked})}),
+    el("div",{class:"corpo"},
+      el("div",{class:"nome"},t.cosa),
+      el("div",{class:"meta"},
+        !t.fatto&&t.entro&&t.entro<oggi()&&el("span",{class:"tardi"},"Scaduto"),
+        t.entro&&el("span",null,"entro il "+giorno(t.entro)),
+        persona==null&&(t.chi||[]).length?el("span",null,"di "+t.chi.join(", ")):altri.length?el("span",null,"con "+altri.join(", ")):null,
+        t.da&&el("span",null,"assegnato da "+t.da))),
+    scrive&&el("div",{class:"gesti"},elimina("task",t)));
+}
+function disegnaTask(){
+  const tutti=aperti(), di=p=>tutti.filter(t=>(t.chi||[]).includes(p));
+  $("t-filtro").replaceChildren(
+    el("button",{type:"button",class:"chip","aria-pressed":String(!filtro),onclick:()=>{filtro="";disegnaTask()}},"Tutti",el("small",null,String(tutti.length))),
+    ...SQUADRA.map(p=>el("button",{type:"button",class:"chip","aria-pressed":String(filtro===p),onclick:()=>{filtro=p;disegnaTask()}},p,el("small",null,String(di(p).length)))));
+  const blocchi=(filtro?[filtro]:SQUADRA).map(p=>{
+    const miei=di(p).sort(perScadenza);
+    return miei.length?el("div",{class:"blocco"},el("h2",{class:"t"},p,el("small",null,miei.length===1?"1 compito":miei.length+" compiti")),miei.map(t=>rigaTask(t,p))):null;
+  }).filter(Boolean);
+  const soli=filtro?[]:tutti.filter(t=>!(t.chi||[]).some(p=>SQUADRA.includes(p))).sort(perScadenza);
+  if(soli.length)blocchi.push(el("div",{class:"blocco"},el("h2",{class:"t"},"Senza nome"),soli.map(t=>rigaTask(t,null))));
+  const fatti=dati.task.filter(t=>t.fatto&&(!filtro||(t.chi||[]).includes(filtro))).sort(recenti);
+  $("l-task").replaceChildren(...lista("task",blocchi,filtro?filtro+" non ha compiti aperti.":VUOTO.task),
+    fatti.length?el("details",{open:fattiAperti,ontoggle:e=>{fattiAperti=e.currentTarget.open}},el("summary",null,"Fatti ("+fatti.length+")"),fatti.map(t=>rigaTask(t,null))):"");
+}
+function lista(k,righe,vuoto){
+  if(!pronto[k])return [el("div",{class:"vuoto"},"Carico…")];
+  return righe.length?[el("div",{style:"display:flex;flex-direction:column;gap:18px"},righe)]:[el("div",{class:"vuoto"},vuoto)];
+}
+function rigaVoce(k,v){
+  const u=indirizzo(v.link);
+  return el("div",{class:"riga"+(v.discussa?" spenta":"")},
+    el("div",{class:"corpo"},
+      el("div",{class:"nome"},v.testo),
+      el("div",{class:"meta"},
+        u&&el("a",{href:u.href,target:"_blank",rel:"noopener noreferrer"},u.hostname.replace(/^www\./,"")+" ↗"),
+        el("span",null,[v.da,giorno(v.creato)].filter(Boolean).join(" · ")))),
+    scrive&&el("div",{class:"gesti"},
+      el("button",{type:"button",class:"mini","aria-pressed":String(!!v.discussa),onclick:()=>cambia(k,v,{discussa:!v.discussa})},v.discussa?"Discussa":"Segna discussa"),
+      elimina(k,v)));
+}
+function disegnaVoci(k){
+  const v=[...dati[k]].sort((a,b)=>(!!a.discussa-!!b.discussa)||recenti(a,b));
+  $("l-"+k).replaceChildren(...lista(k,v.length?[el("div",null,v.map(x=>rigaVoce(k,x)))]:[],VUOTO[k]));
+}
+function disegna(){
+  const conta={task:aperti().length,reference:nuove("reference").length,idee:nuove("idee").length};
+  $("schede").replaceChildren(...Object.keys(SCHEDE).map(k=>el("button",{type:"button",class:"chip","aria-pressed":String(scheda===k),
+    onclick:()=>{scheda=k;history.replaceState(null,"","#"+k);disegna()}},SCHEDE[k],el("small",null,String(conta[k])))));
+  for(const k in SCHEDE){$("s-"+k).hidden=scheda!==k;$("m-"+k).hidden=!db||!scrive}
+  $("b-pdf").hidden=!window.jspdf;
+  disegnaTask();disegnaVoci("reference");disegnaVoci("idee");
+}
+
+// i moduli
+$("t-chi").append(...SQUADRA.map((p,i)=>el("label",{class:"spunta"},el("input",{type:"checkbox",id:"t-chi-"+i,value:p}),p)));
+$("m-task").addEventListener("submit",e=>{
+  e.preventDefault();
+  const chi=[...$("t-chi").querySelectorAll("input:checked")].map(x=>x.value), cosa=$("t-cosa").value.trim();
+  if(!cosa)return;
+  if(!chi.length){avvisa("Scegli per chi è il compito.");return}
+  if(aggiungi("task",{cosa,chi,entro:$("t-entro").value||null,fatto:false}))e.target.reset();
+});
+$("m-reference").addEventListener("submit",e=>{
+  e.preventDefault();
+  const grezzo=$("r-link").value.trim(), u=indirizzo(grezzo), testo=$("r-testo").value.trim();
+  if(!testo)return;
+  if(grezzo&&!u){avvisa("Il link non sembra un indirizzo web. Incollalo intero, oppure lascia il campo vuoto.");return}
+  if(aggiungi("reference",{link:u?u.href:"",testo,discussa:false}))e.target.reset();
+});
+$("m-idee").addEventListener("submit",e=>{
+  e.preventDefault();
+  const testo=$("i-testo").value.trim();
+  if(testo&&aggiungi("idee",{testo,discussa:false}))e.target.reset();
+});
+
+// il PDF da girare prima della riunione: idee e reference non ancora discusse, compiti aperti per persona
+// ponytail: i caratteri di serie di jsPDF coprono solo il Latin-1, emoji e simboli cadono. Se servono, va incorporato un font.
+const piano=s=>String(s||"").replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,"-").replace(/…/g,"...").replace(/[^\n\x20-\xFF]/g,"").trim();
+function componi(){
+  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}), L=18, W=174;
+  let y=52;
+  const posto=h=>{if(y+h>282){doc.addPage();y=22}};
+  const titolo=(t,n)=>{posto(22);doc.setFillColor(0);doc.rect(L,y-6.2,W,9,"F");doc.setFont("helvetica","bold");doc.setFontSize(12);
+    doc.setTextColor(255,220,222);doc.text(t.toUpperCase(),L+3,y);doc.text(String(n),L+W-3,y,{align:"right"});doc.setTextColor(0);y+=11};
+  const voce=(testo,sotto,link)=>{
+    doc.setFont("helvetica","normal");doc.setFontSize(11);
+    const righe=doc.splitTextToSize(piano(testo)||"-",W-7);
+    posto(righe.length*5+(sotto?4.5:0)+(link?4.5:0)+3);
+    doc.rect(L,y-3.1,3,3);doc.text(righe,L+7,y);y+=righe.length*5;
+    doc.setFontSize(9);
+    if(link){doc.setTextColor(200,30,30);doc.textWithLink(doc.splitTextToSize(link,W-7)[0],L+7,y,{url:link});y+=4.5}
+    if(sotto){doc.setTextColor(110);doc.text(piano(sotto),L+7,y);y+=4.5}
+    doc.setTextColor(0);y+=3;
+  };
+  const niente=t=>{doc.setFont("helvetica","italic");doc.setFontSize(10);doc.setTextColor(110);doc.text(t,L,y);doc.setTextColor(0);y+=9};
+  doc.setFillColor(255,51,51);doc.rect(0,0,210,38,"F");
+  doc.setFont("helvetica","bold");doc.setFontSize(26);doc.text("BARI SPARSA",L,19);
+  doc.setFontSize(12);doc.text("Verso la riunione - "+oggi().split("-").reverse().join("/"),L,29);
+  const idee=nuove("idee").sort(recenti), ref=nuove("reference").sort(recenti), comp=aperti();
+  titolo("Idee da discutere",idee.length);
+  idee.length?idee.forEach(v=>voce(v.testo,[v.da,giorno(v.creato)].filter(Boolean).join(" - "))):niente("Nessuna idea nuova.");
+  y+=4;titolo("Reference nuove",ref.length);
+  ref.length?ref.forEach(v=>voce(v.testo,[v.da,giorno(v.creato)].filter(Boolean).join(" - "),(indirizzo(v.link)||{}).href)):niente("Nessuna reference nuova.");
+  y+=4;titolo("Compiti aperti",comp.length);
+  if(!comp.length)niente("Nessun compito aperto.");
+  for(const p of SQUADRA){
+    const miei=comp.filter(t=>(t.chi||[]).includes(p)).sort(perScadenza); if(!miei.length)continue;
+    posto(16);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text(p.toUpperCase(),L,y);y+=6;
+    miei.forEach(t=>voce(t.cosa,[t.entro&&"entro il "+giorno(t.entro),t.da&&"assegnato da "+t.da].filter(Boolean).join(" - ")));
+  }
+  return doc;
+}
+$("b-pdf").addEventListener("click",()=>{
+  try{componi().save("Bari Sparsa - verso la riunione "+oggi()+".pdf")}
+  catch(e){avvisa("Il PDF non è stato scaricato. Riprova fra qualche secondo.")}
+});
+
+// l'ingresso: email e password, gli account li crea Peppe su Supabase
+function mostra(fuori,testo){
+  $("m-ingresso").hidden=!fuori;$("dentro").hidden=fuori;$("mano").hidden=fuori;
+  const a=$("avviso-ingresso");a.textContent=testo||"";a.hidden=!testo;
+}
+$("m-ingresso").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const {error}=await sb.auth.signInWithPassword({email:$("e-mail").value.trim(),password:$("e-pw").value});
+  if(error)mostra(true,"Email o password non tornano. Riprova, o chiedi a Peppe.");
+});
+$("b-esci").addEventListener("click",()=>sb.auth.signOut());
+
+// ponytail: a ogni modifica si ricarica la tabella intera; basta finché le righe sono centinaia
+async function carica(k){
+  const {data,error}=await sb.from(k).select("*").limit(1000);
+  if(!error){dati[k]=data.map(v=>({...v,entro:v.entro||""}));pronto[k]=true;disegna()}
+  else avvisa("Non riesco a leggere i dati. Ricarica la pagina.");
+}
+async function entra(){
+  const {data:nome}=await sb.rpc("mio_nome");
+  if(!nome){mostra(true,"Il tuo account esiste ma non è nella squadra: chiedi a Peppe di aggiungerti.");return}
+  io=nome;$("sono").textContent="Sei "+nome;db=true;mostra(false);disegna();
+  for(const k in SCHEDE)carica(k);
+  sb.channel("squadra").on("postgres_changes",{event:"*",schema:"public"},p=>{if(SCHEDE[p.table])carica(p.table)})
+    .subscribe(s=>{if(s==="CHANNEL_ERROR"||s==="TIMED_OUT")avvisa("La pagina non si aggiorna più da sola. Ricaricala.")});
+}
+let dentro=false;
+sb.auth.onAuthStateChange((ev,s)=>{
+  if(s&&!dentro){dentro=true;setTimeout(entra)}
+  else if(!s){dentro=false;db=false;sb.removeAllChannels();for(const k in SCHEDE){dati[k]=[];pronto[k]=false}mostra(true)}
+});
+</script>
+</html>
