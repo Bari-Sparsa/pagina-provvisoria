@@ -222,7 +222,10 @@ dialog:not([open])::backdrop{opacity:0}
 .foto-scelte button{cursor:pointer}
 .foto-scelte button::after{content:"×";position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:10px;background:var(--ink);color:var(--fondo);font:800 14px/20px var(--largo);text-align:center}
 #d-foto{max-width:min(96vw,1100px);margin:auto;border-radius:16px;background:#000;transform:none}
-#d-foto img{display:block;max-width:100%;max-height:88dvh;margin:auto;min-width:120px;min-height:120px}
+#d-foto img,#d-foto video{display:block;max-width:100%;max-height:88dvh;margin:auto}
+.fotine .etichetta,.foto-scelte .etichetta{border:1.5px solid var(--ink);border-radius:10px;padding:8px 10px;background:var(--carta);color:var(--ink);
+  font:700 12px/1.25 var(--largo);text-align:left;max-width:100%;cursor:pointer}
+.foto-scelte .etichetta{padding-right:18px}
 .agganci{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .aggancio{border:1.5px solid #000;border-radius:9px;padding:5px 9px;font:700 12px/1.2 var(--largo);background:var(--lime);color:#000;
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
@@ -343,9 +346,9 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
     <div data-tipo="reference" style="display:contents" hidden>
       <label class="campo">Link, se c'è<input id="r-link" inputmode="url" placeholder="https://" autocomplete="off"></label>
       <label class="campo">Cos'è e perché ci serve<textarea id="r-testo" maxlength="1000"></textarea></label>
-      <div class="campo" id="r-foto-campo" style="gap:8px" hidden><span>Foto, se ci sono</span>
-        <div class="foto-scelte" id="r-foto-anteprima"></div>
-        <label class="mini" style="align-self:flex-start;cursor:pointer;text-transform:none;letter-spacing:0">+ Foto<input type="file" accept="image/*" multiple id="r-foto" hidden></label>
+      <div class="campo" id="r-all-campo" style="gap:8px" hidden><span>Foto, video, documenti, se ci sono</span>
+        <div class="foto-scelte" id="r-all-anteprima"></div>
+        <label class="mini" style="align-self:flex-start;cursor:pointer;text-transform:none;letter-spacing:0">+ Allega<input type="file" multiple id="r-all" hidden></label>
       </div>
     </div>
     <div data-tipo="idee" style="display:contents" hidden>
@@ -360,7 +363,7 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
   </form>
 </dialog>
 
-<dialog id="d-foto" aria-label="Foto"><img id="foto-grande" alt="Foto della reference"></dialog>
+<dialog id="d-foto" aria-label="Allegato"><div id="lampo"></div></dialog>
 
 <dialog id="d-bug" aria-label="Segnala un bug">
   <form class="foglio" id="m-bug-form">
@@ -525,7 +528,7 @@ function rigaVoce(k,v,pre){
     tessera(v.da,{style:`--c:${P(v.da).c};--f:${P(v.da).f};--d:30px;border-radius:8px`}),
     el("div",{class:"corpo"},
       v.testo?el("div",{class:"nome"},v.testo):null,
-      k==="reference"?fotine(v):null,
+      k==="reference"?allegati(v):null,
       el("div",{class:"meta"},
         u&&el("a",{href:u.href,target:"_blank",rel:"noopener noreferrer"},u.hostname.replace(/^www\./,"")+" ↗"),
         el("span",null,[v.da,giorno(v.creato)].filter(Boolean).join(" · "))),
@@ -721,7 +724,7 @@ $("b-piu").addEventListener("click",()=>{
   document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
   $("m-nuovo").reset();document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
   if(vista==="squadra"&&filtro)$("t-chi").querySelector(`[value="${filtro}"]`).checked=true;
-  refsNuova=new Set();disegnaRefsNuova();fotoScelte=[];disegnaFotoScelte();
+  refsNuova=new Set();disegnaRefsNuova();scelti=[];disegnaScelti();
   $("foglio").showModal();
 });
 $("b-annulla").addEventListener("click",()=>$("foglio").close());
@@ -745,13 +748,13 @@ $("m-nuovo").addEventListener("submit",async e=>{
     ok=await aggiungi("task",{cosa,chi,entro:$("t-entro").value||null,fatto:false});
   }else if(t==="reference"){
     const grezzo=$("r-link").value.trim(), u=indirizzo(grezzo), testo=$("r-testo").value.trim();
-    if(!testo&&!fotoScelte.length)return avvisoFoglio(fotoPronte?"Scrivi due righe su cos'è, o aggiungi una foto.":"Scrivi due righe su cos'è.");
+    if(!testo&&!scelti.length)return avvisoFoglio(allegatiPronti?"Scrivi due righe su cos'è, o allega qualcosa.":"Scrivi due righe su cos'è.");
     if(grezzo&&!u)return avvisoFoglio("Il link non sembra un indirizzo web. Incollalo intero, oppure lascia il campo vuoto.");
     $("b-salva").disabled=true;
     try{
-      const foto=await caricaFoto(testo);
-      if(!foto)return;
-      ok=await aggiungi("reference",{link:u?u.href:"",testo,discussa:false,foto});
+      const fatti=scelti.length?await caricaAllegati(testo):[];
+      if(!fatti)return;
+      ok=await aggiungi("reference",{link:u?u.href:"",testo,discussa:false,...(fatti.length?{allegati:fatti}:{})});
     }finally{$("b-salva").disabled=false}
   }else{
     const testo=$("i-testo").value.trim();
@@ -761,67 +764,88 @@ $("m-nuovo").addEventListener("submit",async e=>{
   if(ok){$("foglio").close();const dove=t==="task"?($("t-chi").querySelector("input:checked")&&vista==="mio"?"mio":"squadra"):t;if(dove!==vista&&vista!=="mio")vai(dove)}
 });
 
-// ── le foto delle reference: la pagina le rimpicciolisce, il passacarte (functions/…/api/foto) le archivia nel Drive
-//    della squadra e le ridà solo a chi è nella squadra. Finché il collegamento a Google non c'è, il campo non si vede.
-const API="api/foto";
-let fotoPronte=false, fotoScelte=[];
-fetch(API+"/stato").then(r=>r.json()).then(j=>{fotoPronte=!!j.pronto;$("r-foto-campo").hidden=!fotoPronte}).catch(()=>{});
+// ── gli allegati delle reference (foto, video, documenti): il passacarte (functions/…/api/allegati) dà il permesso, il
+//    browser manda il file direttamente al Drive della squadra, e poi li si rilegge solo passando dal passacarte.
+//    Delle immagini si carica l'originale e una miniatura da 400 px per l'elenco. Senza collegamento il campo non si vede.
+const API="api/allegati";
+let allegatiPronti=false, scelti=[];
+fetch(API+"/stato").then(r=>r.json()).then(j=>{allegatiPronti=!!j.pronto;$("r-all-campo").hidden=!allegatiPronti}).catch(()=>{});
 const tokenSb=async()=>(await sb.auth.getSession()).data.session?.access_token||"";
+const eImmagine=t=>/^image\/(jpeg|png|webp|gif|heic|heif|avif)$/.test(t||"");
+const peso=n=>n>=1e9?(n/1e9).toFixed(1).replace(".",",")+" GB":n>=1e6?(n/1e6).toFixed(1).replace(".",",")+" MB":Math.max(1,Math.round(n/1e3))+" KB";
+const estensione=n=>(String(n).match(/\.([a-z0-9]{1,5})$/i)||[,"file"])[1].toUpperCase();
 async function bitmap(f){
   try{return await createImageBitmap(f,{imageOrientation:"from-image"})}
   catch(e){const i=new Image();i.src=URL.createObjectURL(f);await i.decode();return i}
 }
-async function rimpicciolisci(f,lato,q){
-  const b=await bitmap(f), k=Math.min(1,lato/Math.max(b.width,b.height)), c=document.createElement("canvas");
+async function miniatura(f){
+  const b=await bitmap(f), k=Math.min(1,400/Math.max(b.width,b.height)), c=document.createElement("canvas");
   c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);
-  return new Promise(r=>c.toBlob(r,"image/jpeg",q));
+  return new Promise(r=>c.toBlob(r,"image/jpeg",.7));
 }
-function disegnaFotoScelte(){
-  $("r-foto-anteprima").replaceChildren(...fotoScelte.map((f,i)=>el("button",{type:"button","aria-label":"Togli questa foto",
-    onclick:()=>{fotoScelte.splice(i,1);disegnaFotoScelte()}},el("img",{src:URL.createObjectURL(f),alt:""}))));
+function disegnaScelti(){
+  $("r-all-anteprima").replaceChildren(...scelti.map((f,i)=>el("button",{type:"button",class:eImmagine(f.type)?"":"etichetta","aria-label":"Togli "+f.name,
+    onclick:()=>{scelti.splice(i,1);disegnaScelti()}},eImmagine(f.type)?el("img",{src:URL.createObjectURL(f),alt:""}):`${estensione(f.name)} · ${corto(f.name)} · ${peso(f.size)}`)));
 }
-$("r-foto").addEventListener("change",e=>{fotoScelte=[...fotoScelte,...e.target.files].slice(0,6);e.target.value="";disegnaFotoScelte()});
-// carica una alla volta (grande 1600 px e miniatura 400 px); se una non passa la reference non si salva
-async function caricaFoto(testo){
-  const foto=[];
-  for(const [i,f] of fotoScelte.entries()){
-    avvisoFoglio(`Carico la foto ${i+1} di ${fotoScelte.length} sul Drive…`);
-    let r=null;
+$("r-all").addEventListener("change",e=>{scelti=[...scelti,...e.target.files].slice(0,10);e.target.value="";disegnaScelti()});
+// un file: si chiede il permesso al passacarte, poi PUT diretto a Google con l'avanzamento
+async function spedisci(blob,nome,tipo,mini,avanza){
+  const s=await fetch(API+"/sessione",{method:"POST",headers:{Authorization:"Bearer "+await tokenSb(),"Content-Type":"application/json"},body:JSON.stringify({nome,tipo,mini})});
+  if(!s.ok)throw new Error("sessione "+s.status);
+  const {url}=await s.json();
+  return new Promise((ok,ko)=>{
+    const x=new XMLHttpRequest();x.open("PUT",url);x.setRequestHeader("Content-Type",tipo);
+    x.upload.onprogress=e=>e.lengthComputable&&avanza&&avanza(e.loaded/e.total);
+    x.onload=()=>x.status<300?ok(JSON.parse(x.responseText).id):ko(new Error("drive "+x.status));
+    x.onerror=()=>ko(new Error("rete"));x.send(blob);
+  });
+}
+// uno alla volta; se uno non passa la reference non si salva
+async function caricaAllegati(testo){
+  const fatti=[];
+  for(const [i,f] of scelti.entries()){
+    const tipo=f.type||"application/octet-stream", base=`${oggi()} ${io} ${(testo||"reference").slice(0,40)}`;
+    const dice=q=>avvisoFoglio(`Carico ${i+1} di ${scelti.length} sul Drive (${f.name}): ${Math.round(q*100)}%`);
     try{
-      const fd=new FormData();
-      fd.append("foto",await rimpicciolisci(f,1600,.82),"foto.jpg");
-      fd.append("mini",await rimpicciolisci(f,400,.7),"mini.jpg");
-      fd.append("nome",`${oggi()} ${io} ${(testo||"reference").slice(0,40)} ${i+1}`);
-      r=await fetch(API,{method:"POST",headers:{Authorization:"Bearer "+await tokenSb()},body:fd});
-    }catch(e){}
-    if(!r||!r.ok){avvisoFoglio("Una foto non è arrivata sul Drive: riprova fra poco. La reference non è ancora salvata.");return null}
-    foto.push(await r.json());
+      dice(0);
+      const id=await spedisci(f,`${base} - ${f.name}`,tipo,false,dice);
+      let mini=null;
+      if(eImmagine(tipo))try{mini=await spedisci(await miniatura(f),`${base} - ${f.name} (miniatura).jpg`,"image/jpeg",true)}catch(e){}
+      fatti.push({id,mini,nome:f.name,tipo,peso:f.size});
+    }catch(e){avvisoFoglio(`«${f.name}» non è arrivato sul Drive: riprova fra poco. La reference non è ancora salvata.`);return null}
   }
   $("avviso-foglio").hidden=true;
-  return foto;
+  return fatti;
 }
-const urlFoto=new Map();
-function srcFoto(id){
-  if(!urlFoto.has(id))urlFoto.set(id,(async()=>{
+const urlAll=new Map();
+function src(id){
+  if(!urlAll.has(id))urlAll.set(id,(async()=>{
     const r=await fetch(API+"/"+id,{headers:{Authorization:"Bearer "+await tokenSb()}});
     if(!r.ok)throw r.status;
     return URL.createObjectURL(await r.blob());
-  })().catch(e=>{urlFoto.delete(id);throw e}));
-  return urlFoto.get(id);
+  })().catch(e=>{urlAll.delete(id);throw e}));
+  return urlAll.get(id);
 }
-function fotine(v){
-  if(!(v.foto||[]).length)return null;
-  return el("div",{class:"fotine"},v.foto.map(f=>{
-    const img=el("img",{alt:"Foto"});
-    srcFoto(f.mini).then(u=>img.src=u).catch(()=>{img.alt="Non più sul Drive"});
-    return el("button",{type:"button","aria-label":"Apri la foto",onclick:()=>apriFoto(f.id)},img);
+function allegati(v){
+  const a=v.allegati||[]; if(!a.length)return null;
+  return el("div",{class:"fotine"},a.map(f=>{
+    if(f.mini){const img=el("img",{alt:f.nome});src(f.mini).then(u=>img.src=u).catch(()=>{img.alt="Non più sul Drive"});
+      return el("button",{type:"button","aria-label":"Apri "+f.nome,onclick:()=>apri(f)},img)}
+    return el("button",{type:"button",class:"etichetta",onclick:()=>apri(f)},`${/^video\//.test(f.tipo)?"▶ ":""}${estensione(f.nome)} · ${corto(f.nome)} · ${peso(f.peso||0)}`);
   }));
 }
-function apriFoto(id){
-  $("foto-grande").removeAttribute("src");$("d-foto").showModal();
-  srcFoto(id).then(u=>$("foto-grande").src=u).catch(()=>{$("d-foto").close();avvisa("Questa foto non è più sul Drive.")});
+// immagini e video si guardano qui; il resto si scarica col suo nome
+function apri(f){
+  const vedi=eImmagine(f.tipo)||/^video\//.test(f.tipo);
+  if(vedi){$("lampo").replaceChildren(el("div",{class:"vuoto",style:"border:0;color:#fff"},"Carico…"));$("d-foto").showModal()}
+  else avvisa("Scarico «"+f.nome+"»…");
+  src(f.id).then(u=>{
+    if(!vedi){const a=el("a",{href:u,download:f.nome});document.body.append(a);a.click();a.remove();return}
+    $("lampo").replaceChildren(/^video\//.test(f.tipo)?el("video",{src:u,controls:true,autoplay:true,playsinline:true}):el("img",{src:u,alt:f.nome}));
+  }).catch(()=>{$("d-foto").close();avvisa("«"+f.nome+"» non è più sul Drive.")});
 }
-$("d-foto").addEventListener("click",()=>$("d-foto").close());
+$("d-foto").addEventListener("click",e=>{if(e.target===$("d-foto"))$("d-foto").close()});
+$("d-foto").addEventListener("close",()=>$("lampo").replaceChildren());
 
 // ── segnala un bug: diventa un compito per Giuseppe, con la scheda e il tipo di schermo per ritrovarlo ──
 function apriBug(){$("m-bug-form").reset();$("avviso-bug").hidden=true;$("d-bug").showModal()}
@@ -914,7 +938,7 @@ function componi(){
   titolo("E se...?",`Idee da discutere  ${idee.length}`);
   idee.length?idee.forEach(v=>voce({testo:v.testo,da:v.da,sotto:chiE(v),refs:(v.refs||[]).map(id=>dati.reference.find(r=>r.id===id)).filter(Boolean)})):niente("Nessuna idea nuova.");
   y+=4;titolo("Cosa avete visto?",`Reference nuove  ${ref.length}`);
-  ref.length?ref.forEach(v=>voce({testo:v.testo||"(foto)",da:v.da,sotto:chiE(v)+((v.foto||[]).length?`  ·  ${v.foto.length} foto sul Drive`:""),link:(indirizzo(v.link)||{}).href})):niente("Nessuna reference nuova.");
+  ref.length?ref.forEach(v=>voce({testo:v.testo||"(allegati)",da:v.da,sotto:chiE(v)+((v.allegati||[]).length?`  ·  ${v.allegati.length} allegati sul Drive`:""),link:(indirizzo(v.link)||{}).href})):niente("Nessuna reference nuova.");
   y+=4;titolo("Chi fa cosa?",`Compiti aperti  ${comp.length}`);
   if(!comp.length)niente("Nessun compito aperto.");
   for(const p of NOMI){
