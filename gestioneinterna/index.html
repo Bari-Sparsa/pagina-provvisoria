@@ -3,164 +3,397 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FFDCDE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D0708" media="(prefers-color-scheme: dark)">
 <title>Bari Sparsa — Gestione interna</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=Instrument+Serif:ital@0;1&display=swap">
 <style>
-/* Layout: fascia rossa in testa con «chi sei» e il PDF, tre schede, in ogni scheda prima il modulo per aggiungere e sotto l'elenco. Colori delle tavole di Luca. */
+/* I caratteri di Luca (Worldstar, Rockstar) sono «solo uso personale»: i file stanno in font/, fuori da git, e online
+   non ci sono. Senza file il browser passa da solo ai sostituti, Instrument Serif e Archivo stretto. */
+@font-face{font-family:"Worldstar";src:url(font/Worldstar.ttf) format("truetype");font-display:swap}
+@font-face{font-family:"Rockstar";src:url(font/Rockstar-ExtraBold.otf) format("opentype");font-display:swap}
+/* Il linguaggio è quello delle tavole di Luca: fondo rosa, fasce rosse con la scritta larga, domande in graziato
+   dentro etichette lime, blocchi inclinati in trasparenza. Caratteri: Archivo e Instrument Serif fanno da sostituti
+   finché Luca non dice i nomi dei suoi. Il movimento ha una curva sola (--e) e tre durate. */
 :root{
-  --fondo:#FFDCDE; --carta:#FFF3F3; --inchiostro:#000; --tenue:#6A4347; --riga:#E2BABE;
-  --rosso:#FF3333; --su-rosso:#000; --lime:#EAFF9C; --su-lime:#000;
-  --largo:"Archivo",Arial,sans-serif;
+  --rosso:#FF3333; --lime:#EAFF9C; --rosa:#FFDCDE;
+  --fondo:#FFDCDE; --carta:#FFF5F5; --ink:#000; --tenue:#6A4347; --riga:#EBC6C9; --blocchi:#E2BABE; --vetro:rgba(255,220,222,.78);
+  --e:cubic-bezier(.2,0,0,1); --e-in:cubic-bezier(.05,.7,.1,1); --e-out:cubic-bezier(.3,0,1,1);
+  --t1:140ms; --t2:260ms; --t3:420ms;
+  --largo:"Archivo",system-ui,sans-serif; --grazia:"Worldstar","Instrument Serif",Georgia,serif; --stretto:"Rockstar","Archivo",system-ui,sans-serif;
+  --nav:68px; color-scheme:light;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --fondo:#150B0C; --carta:#26171A; --inchiostro:#FFDCDE; --tenue:#C99DA2; --riga:#4C2E33; color-scheme:dark } }
-:root[data-theme="dark"]{
-  --fondo:#150B0C; --carta:#26171A; --inchiostro:#FFDCDE; --tenue:#C99DA2; --riga:#4C2E33; color-scheme:dark }
+@media (prefers-color-scheme:dark){:root{
+  --fondo:#0D0708; --carta:#1B1012; --ink:#FFDCDE; --tenue:#C99DA2; --riga:#3A2326; --blocchi:#2A1517; --vetro:rgba(13,7,8,.78); color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--fondo);color:var(--inchiostro);font:16px/1.4 var(--largo);font-variant-numeric:tabular-nums;margin:0}
-button,select,input,textarea{font:inherit;color:inherit}
-button{cursor:pointer}
-:focus-visible{outline:3px solid var(--inchiostro);outline-offset:2px}
-.t{font-stretch:125%;font-weight:900;text-transform:uppercase;letter-spacing:.01em;line-height:1}
-.dentro{max-width:860px;margin:0 auto}
-.testa{background:var(--rosso);color:var(--su-rosso);padding:22px 16px 18px}
-.testa .dentro{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
-.testa h1{margin:0;font-size:clamp(28px,6vw,44px)}
-.testa p{margin:6px 0 0;font-weight:600}
-.mano{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
-.testa select,.testa .btn{border-color:var(--su-rosso);color:var(--su-rosso)}
-.testa select{background:var(--rosso)}
-.barra{padding:14px 16px 0}
-.gruppo{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.chip{border:2px solid var(--inchiostro);background:transparent;padding:6px 12px;font-weight:700;border-radius:0}
-.chip[aria-pressed="true"]{background:var(--inchiostro);color:var(--fondo)}
-.chip small{font-weight:600;opacity:.7;margin-left:5px}
-.schede .chip{font-stretch:125%;text-transform:uppercase;font-size:14px;font-weight:900;padding:8px 14px}
-.schede .chip[aria-pressed="true"]{background:var(--lime);color:var(--su-lime)}
-main{padding:16px 16px 60px}
-main section{display:flex;flex-direction:column;gap:14px}
-.avviso{background:var(--lime);color:var(--su-lime);padding:10px 14px;font-weight:700;margin-bottom:14px}
-.vuoto{border:2px dashed var(--riga);padding:28px 18px;text-align:center;color:var(--tenue);font-weight:600}
-.modulo{background:var(--carta);border:2px solid var(--inchiostro);padding:14px;display:flex;flex-direction:column;gap:12px}
-label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
-label>input,label>select,label>textarea{font-size:16px;font-weight:500;text-transform:none;letter-spacing:0;padding:8px;border:2px solid var(--inchiostro);background:var(--fondo);border-radius:0;width:100%}
-textarea{resize:vertical;min-height:64px}
-fieldset{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
-legend{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;padding:0;margin-bottom:4px}
-.spunta{flex-direction:row;align-items:center;gap:6px;font-size:15px;font-weight:700;text-transform:none;letter-spacing:0;border:2px solid var(--inchiostro);padding:5px 10px;cursor:pointer}
-.spunta:has(input:checked){background:var(--lime);color:var(--su-lime)}
-.fila{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
-.btn{border:2px solid var(--inchiostro);background:transparent;padding:8px 16px;font-weight:900;font-stretch:125%;text-transform:uppercase;font-size:13px}
-.btn.primo{background:var(--lime);color:var(--su-lime);border-color:var(--inchiostro)}
-.blocco h2{margin:0 0 6px;font-size:18px;display:flex;gap:10px;align-items:baseline}
-.blocco h2 small{font:600 13px var(--largo);text-transform:none;color:var(--tenue);letter-spacing:0}
-.riga{display:flex;gap:12px;align-items:flex-start;padding:11px 12px;background:var(--carta);border-bottom:1.5px solid var(--riga)}
-.riga input[type=checkbox]{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--rosso)}
-.corpo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
-.nome{font-weight:700;white-space:pre-wrap}
-.meta{display:flex;flex-wrap:wrap;gap:3px 10px;align-items:center;font-size:13px;color:var(--tenue);font-weight:600}
-.meta a{color:var(--inchiostro);font-weight:800}
-.tardi{background:var(--rosso);color:var(--su-rosso);padding:0 6px;font-weight:900;font-size:11px;text-transform:uppercase}
-.spenta .nome{opacity:.55}
-.fatta .nome{text-decoration:line-through;opacity:.55}
-.gesti{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;flex:none;max-width:45%}
-.mini{border:1.5px solid var(--inchiostro);background:transparent;padding:3px 8px;font-size:12px;font-weight:800}
-.mini[aria-pressed="true"]{background:var(--inchiostro);color:var(--fondo)}
-.mini.via[data-sicuro]{background:var(--rosso);color:var(--su-rosso)}
-details summary{cursor:pointer;font-weight:800;padding:6px 0}
-.ingresso{max-width:420px;margin:40px auto;padding:0 16px}
-.sono{font-weight:900;font-stretch:125%;text-transform:uppercase;font-size:14px}
-@media (prefers-reduced-motion:no-preference){ .chip,.riga,.mini{transition:background-color .12s} }
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100dvh;background:var(--fondo);color:var(--ink);font:16px/1.45 var(--largo);font-variant-numeric:tabular-nums}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+a{color:inherit}
+
+/* sfondo: i blocchi delle tavole, che scivolano piano */
+.sfondo{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.sfondo i{position:absolute;width:62vmax;height:13vmax;border-radius:3vmax;background:var(--blocchi);opacity:.6;
+  transform:rotate(-58deg) skewX(-24deg);animation:deriva 42s ease-in-out infinite alternate;will-change:transform}
+.sfondo i:nth-child(1){left:-18vmax;top:4vmax}
+.sfondo i:nth-child(2){left:22vmax;top:-10vmax;animation-delay:-12s;animation-duration:51s}
+.sfondo i:nth-child(3){left:46vmax;top:30vmax;animation-delay:-25s}
+.sfondo i:nth-child(4){left:-6vmax;top:52vmax;animation-delay:-6s;animation-duration:47s}
+@keyframes deriva{to{translate:5vmax -4vmax}}
+
+/* i pezzi del linguaggio */
+.dom{display:inline-block;background:var(--lime);color:#000;font:400 clamp(24px,5vw,32px)/1 var(--grazia);
+  padding:.12em .32em .16em;rotate:-2deg;letter-spacing:-.01em}
+.banda{display:block;margin:0;background:var(--rosso);color:#000;font:900 clamp(19px,3.8vw,26px)/1 var(--largo);font-stretch:125%;
+  text-transform:uppercase;letter-spacing:.01em;padding:.42em .5em .38em}
+.tit{display:flex;flex-direction:column;align-items:flex-start;margin:0 0 12px}
+.tit .dom{margin-left:10px;margin-bottom:-6px;position:relative;z-index:1}
+.largo{font-stretch:125%;font-weight:900;text-transform:uppercase;letter-spacing:.01em}
+
+/* il logo: BARI, il simbolo inclinato con il bordo rosso, SPARSA corsivo */
+.logo{display:flex;align-items:center;gap:.08em;font:900 22px/1 var(--largo);font-stretch:112%;color:var(--ink);text-decoration:none;white-space:nowrap}
+.logo em{font-style:italic}
+.logo svg{width:1.55em;height:auto;margin:-.3em -.04em;overflow:visible}
+.simbolo .bordo rect{fill:var(--rosso);stroke:var(--rosso);stroke-width:30;stroke-linejoin:round}
+.simbolo .riempi rect{fill:var(--lime)}
+.simbolo.pieno .bordo{display:none}
+.simbolo.pieno .riempi rect{fill:var(--ink)}
+
+/* tessere delle persone: il colore e l'icona dell'area */
+.tessera{--d:34px;display:inline-grid;place-items:center;width:var(--d);height:var(--d);flex:none;background:var(--c);color:var(--f);border-radius:9px;
+  box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--ink) 18%,transparent)}
+.tessera svg{width:74%;height:74%}
+.tessere{display:inline-flex}
+.tessere .tessera{--d:24px;border-radius:7px;margin-left:-6px;box-shadow:0 0 0 2px var(--carta)}
+.tessere .tessera:first-child{margin-left:0}
+
+/* impianto: telefono */
+.testa{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;background:var(--vetro);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.io-btn{border:0;background:none;padding:0;border-radius:11px}
+.io-btn .tessera{--d:38px}
+main{padding:14px 16px calc(var(--nav) + 110px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto;view-transition-name:vista}
+nav.schede{position:fixed;z-index:6;left:0;right:0;bottom:0;display:flex;justify-content:space-around;gap:4px;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--vetro);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-top:1.5px solid var(--riga)}
+.scheda{position:relative;flex:1;border:0;background:none;padding:9px 4px 8px;font:800 11px/1 var(--largo);font-stretch:118%;text-transform:uppercase;
+  letter-spacing:.03em;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--tenue);border-radius:12px;min-height:52px}
+.scheda svg{width:22px;height:22px}
+.scheda b{position:absolute;top:3px;left:calc(50% + 8px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--rosso);color:#000;
+  font:900 12px/18px var(--stretto);font-stretch:62%}
+.scheda[aria-current]{color:#000}
+.scheda[aria-current]::before{content:"";position:absolute;inset:0;background:var(--lime);border-radius:12px;z-index:-1;view-transition-name:pill}
+.lato{display:none}
+.piu{position:fixed;z-index:7;right:16px;bottom:calc(var(--nav) + 18px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:18px;border:0;
+  background:var(--rosso);color:#000;box-shadow:0 10px 26px -8px rgba(160,0,0,.55);display:grid;place-items:center;
+  transition:transform var(--t1) var(--e),box-shadow var(--t1) var(--e)}
+.piu svg{width:26px;height:26px;transition:rotate var(--t2) var(--e)}
+.piu:active{transform:scale(.92)}
+
+/* impianto: computer */
+@media (min-width:900px){
+  .testa{display:none}
+  .app{display:grid;grid-template-columns:270px 1fr}
+  nav.schede{position:sticky;top:0;height:100dvh;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:6px;
+    padding:26px 18px;border-top:0;border-right:1.5px solid var(--riga)}
+  .lato{display:flex}
+  nav .logo{font-size:25px;margin:4px 6px 30px}
+  .scheda{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:13px 14px;font-size:13px;min-height:0}
+  .scheda b{position:static;margin-left:auto}
+  .azioni-lato{margin-top:auto;flex-direction:column;gap:8px}
+  main{padding:34px 40px 120px}
+  .piu{right:32px;bottom:32px}
+}
+.colonne{display:flex;flex-direction:column}
+.colonne>div{display:contents}
+.colonne .novita{order:-1}
+@media (min-width:1200px){
+  main{max-width:1120px}
+  .colonne>div{display:block}
+  .colonne .novita{order:0}
+  .colonne{display:grid;grid-template-columns:1.2fr 1fr;gap:36px;align-items:start}
+}
+@media (hover:hover){
+  .scheda:not([aria-current]):hover{color:var(--ink);background:color-mix(in srgb,var(--lime) 35%,transparent)}
+  .piu:hover{transform:translateY(-2px) rotate(-3deg);box-shadow:0 16px 30px -8px rgba(160,0,0,.6)}
+  .piu:hover svg{rotate:90deg}
+  .btn:hover{transform:translateY(-1px)}
+  .riga:hover{background:color-mix(in srgb,var(--carta) 70%,var(--lime))}
+}
+
+/* bottoni, campi */
+.btn{border:2px solid var(--ink);background:transparent;padding:11px 16px;border-radius:12px;font:800 13px/1 var(--largo);font-stretch:118%;
+  text-transform:uppercase;letter-spacing:.03em;min-height:44px;transition:transform var(--t1) var(--e),background var(--t1) var(--e)}
+.btn:active{transform:scale(.97)}
+.btn.primo{background:var(--rosso);border-color:var(--rosso);color:#000}
+.btn.lime{background:var(--lime);border-color:var(--lime);color:#000}
+.link{border:0;background:none;padding:6px 0;font-weight:700;text-decoration:underline;text-underline-offset:3px;color:var(--tenue)}
+.campo{display:flex;flex-direction:column;gap:6px;font:800 11px/1.2 var(--largo);font-stretch:118%;text-transform:uppercase;letter-spacing:.05em}
+.campo input,.campo textarea,.area{font:500 16px/1.45 var(--largo);text-transform:none;letter-spacing:0;padding:12px 14px;border:2px solid var(--ink);
+  border-radius:12px;background:var(--fondo);width:100%;transition:box-shadow var(--t1) var(--e)}
+.campo input:focus,.campo textarea:focus,.area:focus{outline:0;box-shadow:0 0 0 4px var(--lime)}
+textarea{resize:vertical;min-height:96px}
+.avviso{background:var(--lime);color:#000;padding:12px 14px;border-radius:12px;font-weight:700;margin:0 0 14px}
+
+/* blocchi di contenuto */
+.blocco{margin:0 0 30px}
+.lista{display:flex;flex-direction:column;background:var(--carta);border-radius:16px;overflow:hidden;box-shadow:0 1px 0 var(--riga)}
+.riga{display:flex;gap:12px;align-items:flex-start;padding:14px;border-bottom:1.5px solid var(--riga);transition:background var(--t1) var(--e)}
+.riga:last-child{border-bottom:0}
+.corpo{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;overflow-wrap:anywhere}
+.nome{font-weight:700;white-space:pre-wrap;transition:opacity var(--t2) var(--e)}
+.meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px;color:var(--tenue);font-weight:600}
+.meta a{color:var(--ink);font-weight:800}
+.chip{display:inline-flex;align-items:center;gap:6px}
+.tardi{background:var(--rosso);color:#000;padding:2px 7px;border-radius:6px;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.oggi{background:var(--lime);color:#000;padding:2px 7px;border-radius:6px;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.fatta .nome{text-decoration:line-through;opacity:.5}
+.spenta .nome{opacity:.5}
+.vuoto{padding:26px 18px;text-align:center;color:var(--tenue);font-weight:600;border:2px dashed var(--riga);border-radius:16px}
+.mini{border:1.5px solid var(--ink);background:transparent;padding:6px 10px;border-radius:9px;font:800 12px/1 var(--largo);min-height:34px}
+.mini[aria-pressed="true"]{background:var(--ink);color:var(--fondo)}
+.via{border:0;background:none;width:34px;height:34px;border-radius:9px;font-size:20px;line-height:1;color:var(--tenue);flex:none}
+.via[data-sicuro]{background:var(--rosso);color:#000;width:auto;padding:0 10px;font:800 12px/1 var(--largo)}
+.gesti{display:flex;gap:6px;align-items:center;flex:none}
+
+/* la spunta: un quadrato che si riempie di lime e disegna il segno */
+.spunta{flex:none;width:30px;height:30px;border:2.5px solid var(--ink);border-radius:9px;background:transparent;padding:0;display:grid;place-items:center;
+  transition:background var(--t2) var(--e),transform var(--t1) var(--e)}
+.spunta svg{width:18px;height:18px;fill:none;stroke:#000;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;
+  transition:stroke-dashoffset var(--t2) var(--e) 60ms}
+.spunta[aria-checked="true"]{background:var(--lime);border-color:var(--lime)}
+.spunta[aria-checked="true"] svg{stroke-dashoffset:0}
+.spunta:active{transform:scale(.88)}
+
+/* il mio spazio */
+.ciao{display:flex;align-items:center;gap:16px;margin:4px 0 26px}
+.ciao .tessera{--d:68px;border-radius:18px}
+.ciao h1{margin:0;font:900 clamp(42px,10vw,64px)/.9 var(--stretto);font-stretch:62%;text-transform:uppercase;letter-spacing:.005em}
+.ciao p{margin:6px 0 0;color:var(--tenue);font-weight:600}
+.novita .riga{align-items:center}
+.tipo{font:800 10px/1 var(--largo);font-stretch:118%;text-transform:uppercase;letter-spacing:.05em;background:var(--ink);color:var(--fondo);padding:4px 6px;border-radius:5px}
+.salvato{font-size:13px;color:var(--tenue);font-weight:600;min-height:20px;margin-top:6px;transition:opacity var(--t2) var(--e)}
+.persone{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px 18px;padding:2px 16px 6px;scrollbar-width:none}
+.persone::-webkit-scrollbar{display:none}
+.persona{scroll-snap-align:start;flex:none;display:flex;align-items:center;gap:9px;border:2px solid var(--ink);background:transparent;border-radius:14px;
+  padding:6px 12px 6px 6px;font-weight:800;min-height:48px;transition:background var(--t1) var(--e),transform var(--t1) var(--e)}
+.persona small{font:900 15px/1 var(--stretto);font-stretch:62%;opacity:.7}
+.persona[aria-pressed="true"]{background:var(--ink);color:var(--fondo)}
+.persona:active{transform:scale(.96)}
+details>summary{cursor:pointer;font-weight:800;padding:12px 2px;list-style:none}
+details>summary::before{content:"▸ ";display:inline-block;transition:rotate var(--t2) var(--e)}
+details[open]>summary::before{rotate:90deg}
+
+/* il foglio per aggiungere: sale dal basso sul telefono, appare al centro sul computer */
+dialog{border:0;padding:0;width:100%;max-width:560px;margin:auto auto 0;border-radius:24px 24px 0 0;background:var(--carta);color:var(--ink);
+  max-height:92dvh;transform:translateY(0);transition:transform var(--t3) var(--e-in),overlay var(--t3) allow-discrete,display var(--t3) allow-discrete}
+dialog::backdrop{background:rgba(0,0,0,.42);transition:opacity var(--t3) var(--e),overlay var(--t3) allow-discrete,display var(--t3) allow-discrete;opacity:1}
+dialog:not([open]){transform:translateY(100%);transition-timing-function:var(--e-out);transition-duration:var(--t2)}
+dialog:not([open])::backdrop{opacity:0}
+@starting-style{dialog[open]{transform:translateY(100%)} dialog[open]::backdrop{opacity:0}}
+.foglio{padding:10px 18px calc(22px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
+.maniglia{width:44px;height:5px;border-radius:3px;background:var(--riga);margin:0 auto 4px}
+.segmenti{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--fondo);padding:5px;border-radius:14px}
+.segmenti label{position:relative;text-align:center;padding:11px 4px;border-radius:10px;font:800 12px/1 var(--largo);font-stretch:118%;text-transform:uppercase;cursor:pointer}
+.segmenti input{position:absolute;opacity:0;pointer-events:none}
+.segmenti label:has(input:checked){background:var(--lime);color:#000}
+.scegli{display:flex;flex-wrap:wrap;gap:8px}
+.scegli label{display:flex;align-items:center;gap:8px;border:2px solid var(--ink);border-radius:12px;padding:5px 12px 5px 5px;font-weight:800;cursor:pointer;
+  transition:background var(--t1) var(--e)}
+.scegli label .tessera{--d:30px}
+.scegli input{position:absolute;opacity:0;pointer-events:none}
+.scegli label:has(input:checked){background:var(--ink);color:var(--fondo)}
+.scegli label:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:2px}
+@media (min-width:900px){
+  dialog{margin:auto;border-radius:24px}
+  dialog:not([open]){transform:scale(.96);opacity:0}
+  dialog{transition:transform var(--t3) var(--e-in),opacity var(--t2) var(--e),overlay var(--t3) allow-discrete,display var(--t3) allow-discrete}
+  @starting-style{dialog[open]{transform:scale(.96);opacity:0}}
+  .maniglia{display:none}
+  .foglio{padding:24px}
+}
+
+/* il menu della persona, il messaggio che arriva */
+[popover]{border:0;padding:8px;border-radius:16px;background:var(--carta);color:var(--ink);box-shadow:0 18px 40px -12px rgba(0,0,0,.35);
+  margin:calc(env(safe-area-inset-top) + 62px) 12px auto auto;display:flex;flex-direction:column;gap:4px;min-width:200px;
+  transition:opacity var(--t2) var(--e),transform var(--t2) var(--e),overlay var(--t2) allow-discrete,display var(--t2) allow-discrete;
+  opacity:1;transform:none}
+[popover]:not(:popover-open){display:none;opacity:0;transform:translateY(-6px) scale(.98)}
+@starting-style{[popover]:popover-open{opacity:0;transform:translateY(-6px) scale(.98)}}
+[popover] button{text-align:left;border:0;background:none;padding:12px;border-radius:10px;font-weight:700}
+.biglietto{position:fixed;z-index:9;left:50%;bottom:calc(var(--nav) + 92px + env(safe-area-inset-bottom));translate:-50% 0;display:flex;align-items:center;gap:10px;
+  background:var(--ink);color:var(--fondo);padding:10px 16px 10px 10px;border-radius:14px;font-weight:700;font-size:14px;max-width:calc(100vw - 32px);
+  animation:biglietto 3.6s var(--e) both;pointer-events:none}
+.biglietto .tessera{--d:28px}
+@keyframes biglietto{0%{opacity:0;transform:translateY(16px) skewX(-6deg)}8%,88%{opacity:1;transform:none}100%{opacity:0;transform:translateY(8px)}}
+@media (min-width:900px){.biglietto{bottom:32px;left:calc(50% + 135px)}}
+
+/* l'ingresso */
+.ingresso{min-height:100dvh;display:grid;place-items:center;padding:calc(env(safe-area-inset-top) + 24px) 16px calc(env(safe-area-inset-bottom) + 24px)}
+.ingresso .dentro{width:100%;max-width:420px;display:flex;flex-direction:column;gap:22px}
+.ingresso .grande{width:min(46vw,190px);margin:0 auto -6px;display:block;overflow:visible}
+.ingresso .logo{justify-content:center;font-size:clamp(26px,8vw,36px)}
+.carta{background:var(--carta);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 50px -24px rgba(120,0,0,.35)}
+.anima rect{transform-box:fill-box;transform-origin:center;animation:pezzo 620ms var(--e-in) both;animation-delay:calc(var(--i) * 28ms)}
+@keyframes pezzo{from{opacity:0;transform:translate(-40px,-26px) skewX(-24deg) scale(.4)}}
+.respira rect{animation:respira 2.4s ease-in-out infinite;animation-delay:calc(var(--i) * 70ms);transform-box:fill-box;transform-origin:center}
+@keyframes respira{50%{opacity:.25;transform:scale(.8)}}
+
+/* l'entrata delle cose: salgono e si raddrizzano, come i blocchi del logo */
+.entra>*{animation:entra var(--t3) var(--e-in) both;animation-delay:calc(min(var(--i,0),8) * 40ms)}
+@keyframes entra{from{opacity:0;transform:translateY(16px) skewY(1.6deg)}}
+@keyframes esce{to{opacity:0;transform:translateY(-8px)}}
+::view-transition-group(*){animation-duration:var(--t2);animation-timing-function:var(--e)}
+::view-transition-new(*):only-child{animation:entra var(--t3) var(--e-in) both}
+::view-transition-old(*):only-child{animation:esce var(--t1) var(--e-out) both}
+html.cambio .riga{view-transition-name:none!important}
+html.cambio::view-transition-old(vista){animation:esce var(--t1) var(--e-out) both}
+html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) both}
+::view-transition-group(pill){animation-duration:var(--t3);animation-timing-function:cubic-bezier(.2,.9,.25,1.08)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
+}
 </style>
 
-<header class="testa"><div class="dentro">
-  <div><h1 class="t">Bari Sparsa<br>Squadra</h1><p>Compiti, reference e idee, in un posto solo.</p></div>
-  <div class="mano" id="mano" hidden>
-    <span class="sono" id="sono"></span>
-    <button type="button" class="btn" id="b-pdf" hidden>PDF per la riunione</button>
-    <button type="button" class="btn" id="b-esci">Esci</button>
+<div class="sfondo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<!-- l'ingresso -->
+<section class="ingresso" id="v-ingresso" hidden>
+  <div class="dentro">
+    <svg class="simbolo grande anima" id="simbolo-grande" viewBox="-40 -30 560 540" aria-hidden="true"></svg>
+    <div class="logo" aria-label="Bari Sparsa"><span>BARI</span><em>SPARSA</em></div>
+    <form class="carta" id="m-ingresso">
+      <div class="tit"><span class="dom">Chi sei?</span><h1 class="banda">Gestione interna</h1></div>
+      <div class="avviso" id="avviso-ingresso" role="status" hidden></div>
+      <label class="campo">Email<input type="email" id="e-mail" required autocomplete="username" inputmode="email"></label>
+      <label class="campo">Password<input type="password" id="e-pw" required autocomplete="current-password"></label>
+      <button class="btn primo">Entra</button>
+      <button type="button" class="link" id="b-dimenticata">Password dimenticata?</button>
+    </form>
+    <form class="carta" id="m-password" hidden>
+      <div class="tit"><span class="dom">Benvenuto.</span><h1 class="banda">Scegli la password</h1></div>
+      <div class="avviso" id="avviso-password" role="status" hidden></div>
+      <label class="campo">La tua password<input type="password" id="n-pw" required minlength="8" autocomplete="new-password"></label>
+      <p style="margin:0;color:var(--tenue);font-weight:600;font-size:14px">Almeno 8 caratteri. La userai per entrare da qui in avanti.</p>
+      <button class="btn primo">Salva ed entra</button>
+    </form>
   </div>
-</div></header>
+</section>
 
-<form class="modulo ingresso" id="m-ingresso" hidden>
-  <div class="avviso" id="avviso-ingresso" role="status" hidden></div>
-  <label>Email<input type="email" id="e-mail" required autocomplete="username"></label>
-  <label>Password<input type="password" id="e-pw" required autocomplete="current-password"></label>
-  <div class="fila"><button type="button" class="mini" id="b-dimenticata">Password dimenticata?</button><button class="btn primo">Entra</button></div>
-</form>
+<section class="ingresso" id="v-carico" hidden>
+  <svg class="simbolo grande pieno respira" id="simbolo-carico" viewBox="-40 -30 560 540" aria-label="Carico"></svg>
+</section>
 
-<form class="modulo ingresso" id="m-password" hidden>
-  <div class="avviso" id="avviso-password" role="status" hidden></div>
-  <label>Scegli la tua password<input type="password" id="n-pw" required minlength="8" autocomplete="new-password"></label>
-  <div class="fila"><span>Almeno 8 caratteri.</span><button class="btn primo">Salva ed entra</button></div>
-</form>
-
-<div id="dentro" hidden>
-<nav class="barra"><div class="dentro gruppo schede" id="schede" aria-label="Sezioni"></div></nav>
-
-<main><div class="dentro">
-  <div class="avviso" id="avviso" role="status" hidden></div>
-
-  <section id="s-task">
-    <form class="modulo" id="m-task">
-      <label>Cosa c'è da fare<input id="t-cosa" required maxlength="300" autocomplete="off"></label>
-      <fieldset id="t-chi"><legend>Per chi</legend></fieldset>
-      <div class="fila">
-        <label>Entro, se serve<input type="date" id="t-entro"></label>
-        <button class="btn primo">Assegna</button>
-      </div>
-    </form>
-    <div class="gruppo" id="t-filtro" aria-label="Filtra per persona"></div>
-    <div id="l-task"></div>
-  </section>
-
-  <section id="s-reference" hidden>
-    <form class="modulo" id="m-reference">
-      <label>Link, se c'è<input id="r-link" inputmode="url" placeholder="https://" autocomplete="off"></label>
-      <label>Mini descrizione: cos'è e perché ci serve<textarea id="r-testo" required maxlength="1000"></textarea></label>
-      <div class="fila"><span></span><button class="btn primo">Carica</button></div>
-    </form>
-    <div id="l-reference"></div>
-  </section>
-
-  <section id="s-idee" hidden>
-    <form class="modulo" id="m-idee">
-      <label>L'idea<textarea id="i-testo" required maxlength="2000"></textarea></label>
-      <div class="fila"><span></span><button class="btn primo">Aggiungi</button></div>
-    </form>
-    <div id="l-idee"></div>
-  </section>
-</div></main>
+<!-- dentro -->
+<div class="app" id="v-app" hidden>
+  <header class="testa">
+    <a class="logo" id="logo-testa" href="#mio" aria-label="Bari Sparsa, il mio spazio"></a>
+    <button class="io-btn" id="b-io" popovertarget="menu" aria-label="Menu"></button>
+  </header>
+  <nav class="schede" id="schede" aria-label="Sezioni"></nav>
+  <main id="main"></main>
 </div>
+<div popover id="menu">
+  <button type="button" id="m-pdf">Scarica il PDF per la riunione</button>
+  <button type="button" id="m-esci">Esci</button>
+</div>
+<button class="piu" id="b-piu" aria-label="Aggiungi" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg></button>
+
+<dialog id="foglio" aria-label="Aggiungi">
+  <form class="foglio" id="m-nuovo" method="dialog">
+    <div class="maniglia"></div>
+    <div class="segmenti" role="radiogroup" aria-label="Cosa aggiungi">
+      <label><input type="radio" name="tipo" value="task" checked>Compito</label>
+      <label><input type="radio" name="tipo" value="reference">Reference</label>
+      <label><input type="radio" name="tipo" value="idee">Idea</label>
+    </div>
+    <div data-tipo="task" style="display:contents">
+      <label class="campo">Cosa c'è da fare<input id="t-cosa" maxlength="300" autocomplete="off"></label>
+      <div class="campo" style="gap:8px"><span>Per chi</span><div class="scegli" id="t-chi"></div></div>
+      <label class="campo">Entro, se serve<input type="date" id="t-entro"></label>
+    </div>
+    <div data-tipo="reference" style="display:contents" hidden>
+      <label class="campo">Link, se c'è<input id="r-link" inputmode="url" placeholder="https://" autocomplete="off"></label>
+      <label class="campo">Cos'è e perché ci serve<textarea id="r-testo" maxlength="1000"></textarea></label>
+    </div>
+    <div data-tipo="idee" style="display:contents" hidden>
+      <label class="campo">L'idea<textarea id="i-testo" maxlength="2000"></textarea></label>
+    </div>
+    <div class="avviso" id="avviso-foglio" role="status" hidden></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" class="btn" id="b-annulla">Annulla</button>
+      <button class="btn primo" id="b-salva" value="salva">Aggiungi</button>
+    </div>
+  </form>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
-// Chiave pubblica per scelta: i dati li protegge il database (gestioneinterna.sql nel brain), non questa pagina.
 // arrivati dal link di invito o di recupero: prima si sceglie la password (si legge prima che il client pulisca l'indirizzo)
 let daLink=/type=(invite|recovery)/.test(location.hash);
+// Chiave pubblica per scelta: i dati li protegge il database (gestioneinterna.sql nel brain), non questa pagina.
 const sb=supabase.createClient("https://ehclovlvospxfaappksk.supabase.co","sb_publishable_jf5dkgBhIwiTq9UUyy6zNQ_EY7Z1N9U");
-const SQUADRA=["Giuseppe","Simone","Denise","Imma","Davide","Luca"];
-// le chiavi sono anche i nomi delle tabelle su Supabase
-const SCHEDE={task:"Compiti",reference:"Reference",idee:"Idee"};
-const VUOTO={task:"Nessun compito aperto. Scrivine uno qui sopra e scegli per chi è.",
-  reference:"Qui finiscono le reference che vedete in giro: un link e due righe su cos'è.",
-  idee:"Nessuna idea ancora. Scrivi la prima qui sopra: la vedono tutti."};
+
+// ── le icone delle sei aree, ridisegnate dall'identità v1 (in un quadrato di 100) ──
+const croce=(x,y,s,r=0)=>{const a=s/2,w=s*.2,h=s*.13;
+  return `<path transform="rotate(${r} ${x} ${y})" d="M${x-w} ${y-a}H${x+w}V${y-w}H${x+a}V${y+w}H${x+w}V${y+a}H${x-w}V${y+w}H${x-a}V${y-w}H${x-w}ZM${x-h} ${y-h}V${y+h}H${x+h}V${y-h}Z"/>`};
+const ret=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/>`;
+const ICONE={
+  creativita:croce(27,27,42,45)+croce(73,26,40)+croce(26,74,40)+croce(73,73,42,45),
+  urbanistica:`<path d="M35 64V14H65V64H56V26H44V64Z"/>`+croce(19,76,32)+croce(81,76,32),
+  memoria:ret(10,14,25,22)+ret(38,14,25,22)+ret(68,14,25,22)+ret(24,42,25,22)+ret(52,42,25,22)+ret(17,70,25,22)+ret(45,70,40,22),
+  comunita:ret(6,8,20,20)+ret(40,8,20,20)+ret(74,8,20,20)+ret(6,72,20,20)+ret(40,72,20,20)+ret(74,72,20,20)+ret(18,40,20,20)+ret(62,40,20,20)+`<path d="M50 35L65 50L50 65L35 50Z"/>`,
+  futuro:croce(33,42,48,45)+croce(67,59,48,45),
+  digital:`<path d="M20 31L38 50L20 69L2 50Z"/><path d="M80 31L98 50L80 69L62 50Z"/><path d="M42 31H58V69H42ZM47 38V62H53V38Z"/>`,
+};
+const icona=k=>`<svg viewBox="-4 -4 108 108" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="4" stroke-linejoin="round" fill-rule="evenodd">${ICONE[k]}</g></svg>`;
+
+// ── la squadra: ognuno ha un colore e l'icona di un'area ──
+const SQUADRA=[
+  {n:"Giuseppe",c:"#FF3333",f:"#000",i:"digital"},
+  {n:"Simone",c:"#EAFF9C",f:"#000",i:"urbanistica"},
+  {n:"Denise",c:"#000000",f:"#EAFF9C",i:"comunita"},
+  {n:"Imma",c:"#F2956B",f:"#000",i:"memoria"},
+  {n:"Davide",c:"#7A1A1A",f:"#FFDCDE",i:"futuro"},
+  {n:"Luca",c:"#E2BABE",f:"#000",i:"creativita"},
+];
+const NOMI=SQUADRA.map(p=>p.n);
+const P=n=>SQUADRA.find(p=>p.n===n)||{n,c:"#888",f:"#000",i:"comunita"};
+
+// ── il simbolo: i blocchi dell'identità, inclinati come nel logo di Luca ──
+const BLOCCHI=[[240.19,0],[269.73,26.07],[301.02,50.4],[304.17,125.74],[347.63,158.76],[368.48,186.57],[385.87,226.55],[114.72,71.86],[398.03,264.79],[282.77,219.16],[74.74,99.67],[225.41,194.82],[111.24,146.6],[308.84,273.04],[398.03,346.48],[309.32,340.9],[112.32,231.11],[18.44,212.3],[336.07,419.48],[207.12,419.48],[0,318.67],[36.5,348.22],[114.72,419.48],[57.36,395.15]];
+// due strati: sotto il bordo rosso di tutti i blocchi, sopra il riempimento, così il contorno resta solo fuori
+const blocchi=()=>BLOCCHI.map(([x,y],i)=>`<rect style="--i:${i}" x="${x}" y="${y}" width="59.97" height="59.97" rx="9"/>`).join("");
+const simbolo=()=>`<g transform="translate(70 0) skewX(-14)"><g class="bordo">${blocchi()}</g><g class="riempi">${blocchi()}</g></g>`;
+
+const SCHEDE={mio:"Il mio spazio",squadra:"Squadra",reference:"Reference",idee:"Idee"};
+const VUOTO={reference:"Qui finiscono le reference che vedete in giro: un link e due righe su cos'è.",
+  idee:"Nessuna idea ancora. Scrivi la prima: la vede tutta la squadra."};
+const TIPI={task:"compito",reference:"reference",idee:"idea"};
 
 const dati={task:[],reference:[],idee:[]}, pronto={};
-let db=false, scrive=true, io="", filtro="", fattiAperti=false;
-let scheda=SCHEDE[location.hash.slice(1)]?location.hash.slice(1):"task";
+let io="", uid="", prima=null, filtro="", vista=SCHEDE[location.hash.slice(1)]?location.hash.slice(1):"mio";
+const ridotto=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const $=id=>document.getElementById(id);
 function el(tag,attrs,...figli){
   const n=document.createElement(tag);
   for(const k in attrs||{}){const v=attrs[k];
-    if(k==="class")n.className=v; else if(k.startsWith("on"))n.addEventListener(k.slice(2),v);
+    if(k==="class")n.className=v; else if(k==="html")n.innerHTML=v; else if(k.startsWith("on"))n.addEventListener(k.slice(2),v);
     else if(v===true)n.setAttribute(k,""); else if(v!==false&&v!=null)n.setAttribute(k,v);}
   for(const f of figli.flat())if(f!=null&&f!==false)n.append(f);
   return n;
 }
+const tessera=(n,extra)=>{const p=P(n);return el("span",{class:"tessera",title:n,style:`--c:${p.c};--f:${p.f}`,html:icona(p.i),...extra})};
+const tit=(q,t,h="h2")=>el("div",{class:"tit"},el("span",{class:"dom"},q),el(h,{class:"banda"},t));
 const oggi=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
 const giorno=s=>s?s.slice(8,10)+"/"+s.slice(5,7):"";
 const recenti=(a,b)=>String(b.creato||"").localeCompare(String(a.creato||""));
@@ -171,109 +404,204 @@ function indirizzo(s){
   s=String(s||"").trim(); if(!s)return null;
   try{const u=new URL(/^https?:\/\//i.test(s)?s:"https://"+s);return /^https?:$/.test(u.protocol)&&u.hostname.includes(".")?u:null}catch(e){return null}
 }
-function avvisa(testo){const a=$("avviso");a.textContent=testo||"";a.hidden=!testo}
-
-// una scrittura alla volta per documento
-const coda={};
-function scrivi(id,fn){
-  coda[id]=(coda[id]||Promise.resolve()).then(fn).then(r=>{if(r&&r.error)throw r.error;avvisa("")}).catch(()=>{
-    avvisa("Non è stato salvato. Riprova fra qualche secondo; se succede ancora, esci e rientra.");
-  });
-  return coda[id];
+function quando(t){
+  if(!t.entro||t.fatto)return t.entro?el("span",null,"entro il "+giorno(t.entro)):null;
+  const g=Math.round((new Date(t.entro)-new Date(oggi()))/864e5);
+  if(g<0)return el("span",{class:"tardi"},g===-1?"in ritardo di 1 giorno":`in ritardo di ${-g} giorni`);
+  if(g===0)return el("span",{class:"oggi"},"oggi");
+  if(g===1)return el("span",{class:"oggi"},"domani");
+  return el("span",null,"entro il "+giorno(t.entro));
 }
-function aggiungi(k,d){
-  scrivi("nuovo-"+k,()=>sb.from(k).insert({...d,da:io}));
-  return true;
+let avvisoTimer;
+function avvisa(testo){
+  document.querySelector(".biglietto")?.remove();
+  if(testo)document.body.append(el("div",{class:"biglietto",role:"status"},testo));
 }
-const cambia=(k,v,d)=>scrivi(v.id,()=>sb.from(k).update(d).eq("id",v.id));
-function elimina(k,v){
-  return el("button",{type:"button",class:"mini via","aria-label":"Elimina",onclick:e=>{
-    const b=e.currentTarget;
-    if(!b.dataset.sicuro){b.dataset.sicuro="1";b.textContent="Elimino?";setTimeout(()=>{delete b.dataset.sicuro;b.textContent="×"},3500);return}
-    scrivi(v.id,()=>sb.from(k).delete().eq("id",v.id));
-  }},"×");
+function biglietto(da,testo){
+  document.querySelector(".biglietto")?.remove();
+  document.body.append(el("div",{class:"biglietto",role:"status"},tessera(da),testo));
 }
 
-function rigaTask(t,persona){
-  const altri=(t.chi||[]).filter(p=>p!==persona);
-  return el("div",{class:"riga"+(t.fatto?" fatta":"")},
-    el("input",{type:"checkbox",checked:!!t.fatto,disabled:!scrive,"aria-label":"Fatto: "+t.cosa,onchange:e=>cambia("task",t,{fatto:e.target.checked})}),
+// ── disegnare, con le transizioni del browser quando ci sono ──
+function aggiorna(cambiaVista){
+  const scrive=/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName||"");
+  if(ridotto||!document.startViewTransition||(scrive&&!cambiaVista)){disegna();return}
+  if(cambiaVista)document.documentElement.classList.add("cambio");
+  const t=document.startViewTransition(disegna);
+  t.ready.catch(()=>{});t.finished.catch(()=>{}).finally(()=>document.documentElement.classList.remove("cambio"));
+}
+function vai(k){if(k===vista)return;vista=k;filtro="";history.replaceState(null,"","#"+k);aggiorna(true);scrollTo({top:0})}
+
+const ICONA_SCHEDA={mio:null,squadra:"comunita",reference:"digital",idee:"creativita"};
+function disegnaSchede(){
+  const conta={mio:aperti().filter(t=>(t.chi||[]).includes(io)).length,squadra:0,reference:nuove("reference").length,idee:nuove("idee").length};
+  $("schede").replaceChildren(
+    el("a",{class:"logo lato",href:"#mio",html:logoHTML,onclick:e=>{e.preventDefault();vai("mio")}}),
+    ...Object.keys(SCHEDE).map(k=>el("button",{type:"button",class:"scheda","aria-current":vista===k?"page":false,onclick:()=>vai(k)},
+      k==="mio"?tessera(io,{style:`--c:${P(io).c};--f:${P(io).f};--d:22px;border-radius:6px;box-shadow:none`}):el("span",{html:icona(ICONA_SCHEDA[k]),style:"display:contents"}),
+      k==="mio"?"Mio":SCHEDE[k], conta[k]?el("b",null,String(conta[k])):null)),
+    el("div",{class:"lato azioni-lato"},
+      el("button",{type:"button",class:"btn",onclick:scaricaPdf},"PDF riunione"),
+      el("button",{type:"button",class:"btn",onclick:()=>sb.auth.signOut()},"Esci")));
+}
+
+function rigaTask(t,pre,opz={}){
+  const altri=(t.chi||[]).filter(p=>p!==io);
+  return el("div",{class:"riga"+(t.fatto?" fatta":""),style:`view-transition-name:${pre}-${t.id}`},
+    el("button",{type:"button",class:"spunta",role:"checkbox","aria-checked":String(!!t.fatto),"aria-label":"Fatto: "+t.cosa,
+      onclick:e=>{e.currentTarget.setAttribute("aria-checked",String(!t.fatto));setTimeout(()=>cambia("task",t,{fatto:!t.fatto}),ridotto?0:240)},
+      html:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'}),
     el("div",{class:"corpo"},
       el("div",{class:"nome"},t.cosa),
       el("div",{class:"meta"},
-        !t.fatto&&t.entro&&t.entro<oggi()&&el("span",{class:"tardi"},"Scaduto"),
-        t.entro&&el("span",null,"entro il "+giorno(t.entro)),
-        persona==null&&(t.chi||[]).length?el("span",null,"di "+t.chi.join(", ")):altri.length?el("span",null,"con "+altri.join(", ")):null,
-        t.da&&el("span",null,"assegnato da "+t.da))),
-    scrive&&el("div",{class:"gesti"},elimina("task",t)));
+        quando(t),
+        (opz.tutti?(t.chi||[]):altri).length?el("span",{class:"chip"},el("span",{class:"tessere"},(opz.tutti?t.chi:altri).map(n=>tessera(n))),opz.tutti?t.chi.join(", "):"con "+altri.join(", ")):null,
+        t.da&&t.da!==io?el("span",null,"da "+t.da):null)),
+    el("div",{class:"gesti"},elimina("task",t)));
 }
-function disegnaTask(){
-  const tutti=aperti(), di=p=>tutti.filter(t=>(t.chi||[]).includes(p));
-  $("t-filtro").replaceChildren(
-    el("button",{type:"button",class:"chip","aria-pressed":String(!filtro),onclick:()=>{filtro="";disegnaTask()}},"Tutti",el("small",null,String(tutti.length))),
-    ...SQUADRA.map(p=>el("button",{type:"button",class:"chip","aria-pressed":String(filtro===p),onclick:()=>{filtro=p;disegnaTask()}},p,el("small",null,String(di(p).length)))));
-  const blocchi=(filtro?[filtro]:SQUADRA).map(p=>{
-    const miei=di(p).sort(perScadenza);
-    return miei.length?el("div",{class:"blocco"},el("h2",{class:"t"},p,el("small",null,miei.length===1?"1 compito":miei.length+" compiti")),miei.map(t=>rigaTask(t,p))):null;
-  }).filter(Boolean);
-  const soli=filtro?[]:tutti.filter(t=>!(t.chi||[]).some(p=>SQUADRA.includes(p))).sort(perScadenza);
-  if(soli.length)blocchi.push(el("div",{class:"blocco"},el("h2",{class:"t"},"Senza nome"),soli.map(t=>rigaTask(t,null))));
-  const fatti=dati.task.filter(t=>t.fatto&&(!filtro||(t.chi||[]).includes(filtro))).sort(recenti);
-  $("l-task").replaceChildren(...lista("task",blocchi,filtro?filtro+" non ha compiti aperti.":VUOTO.task),
-    fatti.length?el("details",{open:fattiAperti,ontoggle:e=>{fattiAperti=e.currentTarget.open}},el("summary",null,"Fatti ("+fatti.length+")"),fatti.map(t=>rigaTask(t,null))):"");
-}
-function lista(k,righe,vuoto){
-  if(!pronto[k])return [el("div",{class:"vuoto"},"Carico…")];
-  return righe.length?[el("div",{style:"display:flex;flex-direction:column;gap:18px"},righe)]:[el("div",{class:"vuoto"},vuoto)];
-}
-function rigaVoce(k,v){
+function rigaVoce(k,v,pre){
   const u=indirizzo(v.link);
-  return el("div",{class:"riga"+(v.discussa?" spenta":"")},
+  return el("div",{class:"riga"+(v.discussa?" spenta":""),style:`view-transition-name:${pre}-${v.id}`},
+    tessera(v.da,{style:`--c:${P(v.da).c};--f:${P(v.da).f};--d:30px;border-radius:8px`}),
     el("div",{class:"corpo"},
       el("div",{class:"nome"},v.testo),
       el("div",{class:"meta"},
         u&&el("a",{href:u.href,target:"_blank",rel:"noopener noreferrer"},u.hostname.replace(/^www\./,"")+" ↗"),
         el("span",null,[v.da,giorno(v.creato)].filter(Boolean).join(" · ")))),
-    scrive&&el("div",{class:"gesti"},
-      el("button",{type:"button",class:"mini","aria-pressed":String(!!v.discussa),onclick:()=>cambia(k,v,{discussa:!v.discussa})},v.discussa?"Discussa":"Segna discussa"),
+    el("div",{class:"gesti"},
+      el("button",{type:"button",class:"mini","aria-pressed":String(!!v.discussa),onclick:()=>cambia(k,v,{discussa:!v.discussa})},v.discussa?"Discussa":"Discussa?"),
       elimina(k,v)));
 }
-function disegnaVoci(k){
+function elimina(k,v){
+  return el("button",{type:"button",class:"via","aria-label":"Elimina",onclick:e=>{
+    const b=e.currentTarget;
+    if(!b.dataset.sicuro){b.dataset.sicuro="1";b.textContent="Elimino?";setTimeout(()=>{delete b.dataset.sicuro;b.textContent="×"},3500);return}
+    togli(k,v);
+  }},"×");
+}
+const lista=(righe,vuoto)=>righe.length?el("div",{class:"lista"},righe):el("div",{class:"vuoto"},vuoto);
+const caricoOVuoto=(k,righe,vuoto)=>pronto[k]?lista(righe,vuoto):el("div",{class:"vuoto"},"Carico…");
+
+// ── le quattro viste ──
+const appunti=el("textarea",{class:"area",id:"appunti",placeholder:"Scrivi qui. Lo vedi solo tu, si salva da solo.","aria-label":"I miei appunti",rows:"6"});
+const salvato=el("div",{class:"salvato",role:"status"});
+const bloccoAppunti=el("section",{class:"blocco"},tit("Solo per te.","Appunti"),appunti,salvato);
+
+function vistaMio(){
+  const miei=aperti().filter(t=>(t.chi||[]).includes(io)).sort(perScadenza);
+  const tardi=miei.filter(t=>t.entro&&t.entro<oggi()).length;
+  const dati_da_me=dati.task.filter(t=>t.da===io&&(t.chi||[]).some(n=>n!==io)).sort((a,b)=>(a.fatto-b.fatto)||perScadenza(a,b));
+  const novita=prima?[...dati.task.map(v=>({...v,k:"task"})),...dati.reference.map(v=>({...v,k:"reference"})),...dati.idee.map(v=>({...v,k:"idee"}))]
+    .filter(v=>v.da!==io&&String(v.creato)>prima).sort(recenti):[];
+  const p=P(io);
+  return [
+    el("div",{class:"ciao"},tessera(io),el("div",null,el("h1",null,"Ciao "+io),
+      el("p",null,miei.length?`${miei.length===1?"Hai 1 compito aperto":`Hai ${miei.length} compiti aperti`}${tardi?`, ${tardi} in ritardo`:""}.`:"Niente da fare per te. Bel momento."))),
+    el("div",{class:"colonne"},
+      el("div",null,
+    el("section",{class:"blocco"},tit("Cosa devo fare?","I miei compiti"),
+      caricoOVuoto("task",miei.map(t=>rigaTask(t,"m")),"Nessun compito per te. Quando qualcuno te ne dà uno, compare qui.")),
+    el("section",{class:"blocco"},tit("A che punto sono?","Quelli che ho dato"),
+      caricoOVuoto("task",dati_da_me.map(t=>rigaTask(t,"d",{tutti:true})),"Non hai ancora dato compiti agli altri. Usa il + in basso."))),
+      el("div",null,
+    novita.length?el("section",{class:"blocco novita"},tit("Nel frattempo?",`${novita.length} novità`),
+      lista(novita.slice(0,12).map(v=>el("div",{class:"riga",style:`view-transition-name:n-${v.id}`},tessera(v.da),
+        el("div",{class:"corpo"},el("div",{class:"nome"},v.cosa||v.testo),el("div",{class:"meta"},el("span",{class:"tipo"},TIPI[v.k]),el("span",null,"da "+v.da))),
+        el("button",{type:"button",class:"mini",onclick:()=>vai(v.k==="task"?"squadra":v.k)},"Apri"))),"")):null,
+        bloccoAppunti)),
+  ];
+}
+function vistaSquadra(){
+  const tutti=aperti(), di=p=>tutti.filter(t=>(t.chi||[]).includes(p));
+  const mostra=(filtro?di(filtro):tutti).sort(perScadenza);
+  const fatti=dati.task.filter(t=>t.fatto&&(!filtro||(t.chi||[]).includes(filtro))).sort(recenti);
+  return [
+    tit("Chi fa cosa?","La squadra","h1"),
+    el("div",{class:"persone",role:"group","aria-label":"Filtra per persona"},
+      el("button",{type:"button",class:"persona","aria-pressed":String(!filtro),onclick:()=>{filtro="";aggiorna()},style:"padding-left:14px"},"Tutti",el("small",null,String(tutti.length))),
+      ...SQUADRA.map(p=>el("button",{type:"button",class:"persona","aria-pressed":String(filtro===p.n),onclick:()=>{filtro=filtro===p.n?"":p.n;aggiorna()}},
+        tessera(p.n),p.n,el("small",null,String(di(p.n).length))))),
+    el("section",{class:"blocco"},caricoOVuoto("task",mostra.map(t=>rigaTask(t,"s",{tutti:true})),filtro?filtro+" non ha compiti aperti.":"Nessun compito aperto. Usa il + per darne uno.")),
+    fatti.length?el("details",null,el("summary",null,`Fatti (${fatti.length})`),lista(fatti.map(t=>rigaTask(t,"f",{tutti:true})),"")):null,
+  ];
+}
+function vistaVoci(k){
   const v=[...dati[k]].sort((a,b)=>(!!a.discussa-!!b.discussa)||recenti(a,b));
-  $("l-"+k).replaceChildren(...lista(k,v.length?[el("div",null,v.map(x=>rigaVoce(k,x)))]:[],VUOTO[k]));
+  return [
+    k==="reference"?tit("Cosa avete visto?","Reference","h1"):tit("E se...?","Idee","h1"),
+    caricoOVuoto(k,v.map(x=>rigaVoce(k,x,k[0])),VUOTO[k]),
+  ];
 }
+let primaVolta=true;
 function disegna(){
-  const conta={task:aperti().length,reference:nuove("reference").length,idee:nuove("idee").length};
-  $("schede").replaceChildren(...Object.keys(SCHEDE).map(k=>el("button",{type:"button",class:"chip","aria-pressed":String(scheda===k),
-    onclick:()=>{scheda=k;history.replaceState(null,"","#"+k);disegna()}},SCHEDE[k],el("small",null,String(conta[k])))));
-  for(const k in SCHEDE){$("s-"+k).hidden=scheda!==k;$("m-"+k).hidden=!db||!scrive}
-  $("b-pdf").hidden=!window.jspdf;
-  disegnaTask();disegnaVoci("reference");disegnaVoci("idee");
+  disegnaSchede();
+  const m=$("main");
+  m.replaceChildren(...(vista==="mio"?vistaMio():vista==="squadra"?vistaSquadra():vistaVoci(vista)));
+  if(primaVolta&&pronto.task){primaVolta=false;m.classList.add("entra");[...m.children].forEach((c,i)=>c.style.setProperty("--i",i));
+    setTimeout(()=>m.classList.remove("entra"),900)}
 }
 
-// i moduli
-$("t-chi").append(...SQUADRA.map((p,i)=>el("label",{class:"spunta"},el("input",{type:"checkbox",id:"t-chi-"+i,value:p}),p)));
-$("m-task").addEventListener("submit",e=>{
-  e.preventDefault();
-  const chi=[...$("t-chi").querySelectorAll("input:checked")].map(x=>x.value), cosa=$("t-cosa").value.trim();
-  if(!cosa)return;
-  if(!chi.length){avvisa("Scegli per chi è il compito.");return}
-  if(aggiungi("task",{cosa,chi,entro:$("t-entro").value||null,fatto:false}))e.target.reset();
+// ── scritture: prima si vede, poi si salva (e se non si salva si ricarica) ──
+async function scrivi(k,fn){
+  const {error}=await fn();
+  if(error){avvisa("Non è stato salvato. Riprova fra qualche secondo.");carica(k)}
+}
+function cambia(k,v,d){Object.assign(v,d);aggiorna();scrivi(k,()=>sb.from(k).update(d).eq("id",v.id))}
+function togli(k,v){dati[k]=dati[k].filter(x=>x.id!==v.id);aggiorna();scrivi(k,()=>sb.from(k).delete().eq("id",v.id))}
+async function aggiungi(k,d){
+  const {data,error}=await sb.from(k).insert({...d,da:io}).select().single();
+  if(error){avvisa("Non è stato salvato. Riprova fra qualche secondo.");return false}
+  if(!dati[k].some(x=>x.id===data.id))dati[k].push({...data,entro:data.entro||""});
+  aggiorna();return true;
+}
+
+// ── il foglio per aggiungere ──
+$("t-chi").append(...SQUADRA.map(p=>el("label",null,el("input",{type:"checkbox",value:p.n}),tessera(p.n),p.n)));
+const tipoScelto=()=>document.querySelector('[name=tipo]:checked').value;
+function mostraTipo(){const t=tipoScelto();document.querySelectorAll("[data-tipo]").forEach(d=>d.hidden=d.dataset.tipo!==t);$("avviso-foglio").hidden=true}
+document.querySelectorAll("[name=tipo]").forEach(r=>r.addEventListener("change",mostraTipo));
+$("b-piu").addEventListener("click",()=>{
+  const t=vista==="reference"||vista==="idee"?vista:"task";
+  document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
+  $("m-nuovo").reset();document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
+  if(vista==="squadra"&&filtro)$("t-chi").querySelector(`[value="${filtro}"]`).checked=true;
+  $("foglio").showModal();
 });
-$("m-reference").addEventListener("submit",e=>{
+$("b-annulla").addEventListener("click",()=>$("foglio").close());
+$("foglio").addEventListener("click",e=>{if(e.target===$("foglio"))$("foglio").close()});
+function avvisoFoglio(t){const a=$("avviso-foglio");a.textContent=t;a.hidden=false}
+$("m-nuovo").addEventListener("submit",async e=>{
   e.preventDefault();
-  const grezzo=$("r-link").value.trim(), u=indirizzo(grezzo), testo=$("r-testo").value.trim();
-  if(!testo)return;
-  if(grezzo&&!u){avvisa("Il link non sembra un indirizzo web. Incollalo intero, oppure lascia il campo vuoto.");return}
-  if(aggiungi("reference",{link:u?u.href:"",testo,discussa:false}))e.target.reset();
-});
-$("m-idee").addEventListener("submit",e=>{
-  e.preventDefault();
-  const testo=$("i-testo").value.trim();
-  if(testo&&aggiungi("idee",{testo,discussa:false}))e.target.reset();
+  const t=tipoScelto();let ok=false;
+  if(t==="task"){
+    const cosa=$("t-cosa").value.trim(), chi=[...$("t-chi").querySelectorAll("input:checked")].map(x=>x.value);
+    if(!cosa)return avvisoFoglio("Scrivi cosa c'è da fare.");
+    if(!chi.length)return avvisoFoglio("Scegli per chi è il compito.");
+    ok=await aggiungi("task",{cosa,chi,entro:$("t-entro").value||null,fatto:false});
+  }else if(t==="reference"){
+    const grezzo=$("r-link").value.trim(), u=indirizzo(grezzo), testo=$("r-testo").value.trim();
+    if(!testo)return avvisoFoglio("Scrivi due righe su cos'è.");
+    if(grezzo&&!u)return avvisoFoglio("Il link non sembra un indirizzo web. Incollalo intero, oppure lascia il campo vuoto.");
+    ok=await aggiungi("reference",{link:u?u.href:"",testo,discussa:false});
+  }else{
+    const testo=$("i-testo").value.trim();
+    if(!testo)return avvisoFoglio("Scrivi l'idea.");
+    ok=await aggiungi("idee",{testo,discussa:false});
+  }
+  if(ok){$("foglio").close();const dove=t==="task"?($("t-chi").querySelector("input:checked")&&vista==="mio"?"mio":"squadra"):t;if(dove!==vista&&vista!=="mio")vai(dove)}
 });
 
-// il PDF da girare prima della riunione: idee e reference non ancora discusse, compiti aperti per persona
+// ── gli appunti: si salvano da soli, li vede solo chi li scrive ──
+let appuntiTimer;
+appunti.addEventListener("input",()=>{
+  salvato.textContent="…";clearTimeout(appuntiTimer);
+  appuntiTimer=setTimeout(async()=>{
+    const {error}=await sb.from("personale").upsert({user_id:uid,appunti:appunti.value});
+    salvato.textContent=error?"Non salvato: riprova fra poco.":"Salvato.";
+  },700);
+});
+
+// ── il PDF da girare prima della riunione: idee e reference non ancora discusse, compiti aperti per persona ──
 // ponytail: i caratteri di serie di jsPDF coprono solo il Latin-1, emoji e simboli cadono. Se servono, va incorporato un font.
 const piano=s=>String(s||"").replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,"-").replace(/…/g,"...").replace(/[^\n\x20-\xFF]/g,"").trim();
 function componi(){
@@ -303,63 +631,80 @@ function componi(){
   ref.length?ref.forEach(v=>voce(v.testo,[v.da,giorno(v.creato)].filter(Boolean).join(" - "),(indirizzo(v.link)||{}).href)):niente("Nessuna reference nuova.");
   y+=4;titolo("Compiti aperti",comp.length);
   if(!comp.length)niente("Nessun compito aperto.");
-  for(const p of SQUADRA){
+  for(const p of NOMI){
     const miei=comp.filter(t=>(t.chi||[]).includes(p)).sort(perScadenza); if(!miei.length)continue;
     posto(16);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text(p.toUpperCase(),L,y);y+=6;
     miei.forEach(t=>voce(t.cosa,[t.entro&&"entro il "+giorno(t.entro),t.da&&"assegnato da "+t.da].filter(Boolean).join(" - ")));
   }
   return doc;
 }
-$("b-pdf").addEventListener("click",()=>{
+function scaricaPdf(){
   try{componi().save("Bari Sparsa - verso la riunione "+oggi()+".pdf")}
   catch(e){avvisa("Il PDF non è stato scaricato. Riprova fra qualche secondo.")}
-});
+}
+$("m-pdf").addEventListener("click",()=>{$("menu").hidePopover();scaricaPdf()});
+$("m-esci").addEventListener("click",()=>{$("menu").hidePopover();sb.auth.signOut()});
 
-// l'ingresso: email e password; gli inviti partono da Supabase e ognuno sceglie la sua password
-function mostra(fuori,testo,form="m-ingresso"){
-  $("m-ingresso").hidden=!fuori||form!=="m-ingresso";$("m-password").hidden=!fuori||form!=="m-password";
-  $("dentro").hidden=fuori;$("mano").hidden=fuori;
+// ── l'ingresso ──
+const logoHTML=`<span>BARI</span><svg class="simbolo" viewBox="-40 -30 560 540" aria-hidden="true">${simbolo()}</svg><em>SPARSA</em>`;
+$("simbolo-grande").innerHTML=simbolo();$("simbolo-carico").innerHTML=simbolo();
+document.querySelector("#v-ingresso .logo").innerHTML=logoHTML;
+$("logo-testa").innerHTML=logoHTML;
+$("logo-testa").addEventListener("click",e=>{e.preventDefault();vai("mio")});
+
+function stato(s,testo,form="m-ingresso"){
+  $("v-ingresso").hidden=s!=="fuori";$("v-carico").hidden=s!=="carico";$("v-app").hidden=s!=="dentro";$("b-piu").hidden=s!=="dentro";
+  $("m-ingresso").hidden=form!=="m-ingresso";$("m-password").hidden=form!=="m-password";
   const a=$(form==="m-password"?"avviso-password":"avviso-ingresso");a.textContent=testo||"";a.hidden=!testo;
 }
+$("m-ingresso").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const {error}=await sb.auth.signInWithPassword({email:$("e-mail").value.trim(),password:$("e-pw").value});
+  if(error)stato("fuori","Email o password non tornano. Riprova, o chiedi a Peppe.");
+});
 $("b-dimenticata").addEventListener("click",async()=>{
   const email=$("e-mail").value.trim();
-  if(!email){mostra(true,"Scrivi la tua email qui sotto, poi riclicca «Password dimenticata?».");$("e-mail").focus();return}
+  if(!email){stato("fuori","Scrivi la tua email qui sopra, poi riclicca «Password dimenticata?».");$("e-mail").focus();return}
   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-  mostra(true,error?"La mail non è partita. Riprova fra qualche minuto.":"Se l'indirizzo è della squadra, ti è arrivata una mail con il link per scegliere una password nuova.");
+  stato("fuori",error?"La mail non è partita. Riprova fra qualche minuto.":"Se l'indirizzo è della squadra, ti è arrivata una mail con il link per scegliere una password nuova.");
 });
 $("m-password").addEventListener("submit",async e=>{
   e.preventDefault();
   const {error}=await sb.auth.updateUser({password:$("n-pw").value});
-  if(error){mostra(true,"La password non è stata salvata: prova con una più lunga o diversa.","m-password");return}
+  if(error){stato("fuori","La password non è stata salvata: prova con una più lunga o diversa.","m-password");return}
   daLink=false;history.replaceState(null,"",location.pathname);entra();
 });
-$("m-ingresso").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const {error}=await sb.auth.signInWithPassword({email:$("e-mail").value.trim(),password:$("e-pw").value});
-  if(error)mostra(true,"Email o password non tornano. Riprova, o chiedi a Peppe.");
-});
-$("b-esci").addEventListener("click",()=>sb.auth.signOut());
 
 // ponytail: a ogni modifica si ricarica la tabella intera; basta finché le righe sono centinaia
 async function carica(k){
   const {data,error}=await sb.from(k).select("*").limit(1000);
-  if(!error){dati[k]=data.map(v=>({...v,entro:v.entro||""}));pronto[k]=true;disegna()}
+  if(!error){dati[k]=data.map(v=>({...v,entro:v.entro||""}));pronto[k]=true;aggiorna()}
   else avvisa("Non riesco a leggere i dati. Ricarica la pagina.");
 }
 async function entra(){
-  const {data:nome}=await sb.rpc("mio_nome");
-  if(!nome){mostra(true,"Il tuo account esiste ma non è nella squadra: chiedi a Peppe di aggiungerti.");return}
-  io=nome;$("sono").textContent="Sei "+nome;db=true;mostra(false);disegna();
-  for(const k in SCHEDE)carica(k);
-  sb.channel("squadra").on("postgres_changes",{event:"*",schema:"public"},p=>{if(SCHEDE[p.table])carica(p.table)})
-    .subscribe(s=>{if(s==="CHANNEL_ERROR"||s==="TIMED_OUT")avvisa("La pagina non si aggiorna più da sola. Ricaricala.")});
+  stato("carico");
+  const [{data:nome},{data:u}]=await Promise.all([sb.rpc("mio_nome"),sb.auth.getUser()]);
+  if(!nome){stato("fuori","Il tuo account esiste ma non è nella squadra: chiedi a Peppe di aggiungerti.");return}
+  io=nome;uid=u.user.id;
+  const p=P(io);$("b-io").replaceChildren(tessera(io));
+  const {data:mia}=await sb.from("personale").select("*").maybeSingle();
+  prima=mia?.ultima_visita||null;appunti.value=mia?.appunti||"";
+  sb.from("personale").upsert({user_id:uid,ultima_visita:new Date().toISOString()}).then(()=>{});
+  stato("dentro");disegna();
+  await Promise.all(Object.keys(dati).map(carica));
+  sb.channel("squadra").on("postgres_changes",{event:"*",schema:"public"},x=>{
+    if(!dati[x.table])return;
+    carica(x.table);
+    const n=x.new||{};
+    if(x.eventType==="INSERT"&&n.da&&n.da!==io)biglietto(n.da,`${n.da} ha aggiunto ${x.table==="idee"?"un'idea":x.table==="task"?"un compito":"una reference"}`);
+  }).subscribe(s=>{if(s==="CHANNEL_ERROR"||s==="TIMED_OUT")avvisa("La pagina non si aggiorna più da sola. Ricaricala.")});
 }
 let dentro=false;
 sb.auth.onAuthStateChange((ev,s)=>{
   if(ev==="PASSWORD_RECOVERY")daLink=true;
-  if(s&&daLink){dentro=true;mostra(true,"","m-password")}
+  if(s&&daLink){dentro=true;stato("fuori","","m-password")}
   else if(s&&!dentro){dentro=true;setTimeout(entra)}
-  else if(!s){dentro=false;db=false;sb.removeAllChannels();for(const k in SCHEDE){dati[k]=[];pronto[k]=false}mostra(true)}
+  else if(!s){dentro=false;sb.removeAllChannels();for(const k in dati){dati[k]=[];pronto[k]=false}primaVolta=true;stato("fuori")}
 });
 </script>
 </html>
