@@ -343,6 +343,10 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
 <script>
 // arrivati dal link di invito o di recupero: prima si sceglie la password (si legge prima che il client pulisca l'indirizzo)
 let daLink=/type=(invite|recovery)/.test(location.hash);
+// se si ricarica a metà, la password va ancora scelta: lo ricorda la scheda finché non è salvata
+try{if(daLink)sessionStorage.setItem("bs-pw","1");else daLink=!!sessionStorage.getItem("bs-pw")}catch(e){}
+// link scaduto o già usato: Supabase torna con l'errore nell'indirizzo
+let linkGuasto=/error_code=/.test(location.hash)||/error_code=/.test(location.search);
 // Chiave pubblica per scelta: i dati li protegge il database (gestioneinterna.sql nel brain), non questa pagina.
 const sb=supabase.createClient("https://ehclovlvospxfaappksk.supabase.co","sb_publishable_jf5dkgBhIwiTq9UUyy6zNQ_EY7Z1N9U");
 
@@ -729,7 +733,7 @@ $("m-password").addEventListener("submit",async e=>{
   e.preventDefault();
   const {error}=await sb.auth.updateUser({password:$("n-pw").value});
   if(error){stato("fuori","La password non è stata salvata: prova con una più lunga o diversa.","m-password");return}
-  daLink=false;history.replaceState(null,"",location.pathname);entra();
+  daLink=false;try{sessionStorage.removeItem("bs-pw")}catch(e){}history.replaceState(null,"",location.pathname);entra();
 });
 
 // ponytail: a ogni modifica si ricarica la tabella intera; basta finché le righe sono centinaia
@@ -761,7 +765,9 @@ sb.auth.onAuthStateChange((ev,s)=>{
   if(ev==="PASSWORD_RECOVERY")daLink=true;
   if(s&&daLink){dentro=true;stato("fuori","","m-password")}
   else if(s&&!dentro){dentro=true;setTimeout(entra)}
-  else if(!s){dentro=false;sb.removeAllChannels();for(const k in dati){dati[k]=[];pronto[k]=false}primaVolta=true;viste=new Set();stato("fuori")}
+  else if(!s){dentro=false;sb.removeAllChannels();for(const k in dati){dati[k]=[];pronto[k]=false}primaVolta=true;viste=new Set();daLink=false;try{sessionStorage.removeItem("bs-pw")}catch(e){}
+    stato("fuori",linkGuasto?"Il link è scaduto o è già stato usato. Scrivi la tua email qui sopra e tocca «Password dimenticata?»: ne arriva uno nuovo.":"");
+    if(linkGuasto){linkGuasto=false;history.replaceState(null,"",location.pathname)}}
 });
 </script>
 </html>
