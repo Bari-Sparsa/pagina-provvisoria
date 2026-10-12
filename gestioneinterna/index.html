@@ -215,6 +215,14 @@ dialog:not([open])::backdrop{opacity:0}
 .ag-testo{font-weight:600;white-space:pre-wrap;line-height:1.35;padding-top:4px}
 .ag-idea{margin:0;font-weight:700;white-space:pre-wrap;max-height:5.5em;overflow:hidden}
 .cerca{width:100%;margin:0 0 14px}
+.foto-scelte,.fotine{display:flex;flex-wrap:wrap;gap:8px}
+.fotine{margin-top:8px}
+.foto-scelte img,.fotine img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1.5px solid var(--ink);background:var(--riga);display:block}
+.fotine button,.foto-scelte button{padding:0;border:0;background:none;cursor:zoom-in;position:relative}
+.foto-scelte button{cursor:pointer}
+.foto-scelte button::after{content:"×";position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:10px;background:var(--ink);color:var(--fondo);font:800 14px/20px var(--largo);text-align:center}
+#d-foto{max-width:min(96vw,1100px);margin:auto;border-radius:16px;background:#000;transform:none}
+#d-foto img{display:block;max-width:100%;max-height:88dvh;margin:auto;min-width:120px;min-height:120px}
 .agganci{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .aggancio{border:1.5px solid #000;border-radius:9px;padding:5px 9px;font:700 12px/1.2 var(--largo);background:var(--lime);color:#000;
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
@@ -335,6 +343,10 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
     <div data-tipo="reference" style="display:contents" hidden>
       <label class="campo">Link, se c'è<input id="r-link" inputmode="url" placeholder="https://" autocomplete="off"></label>
       <label class="campo">Cos'è e perché ci serve<textarea id="r-testo" maxlength="1000"></textarea></label>
+      <div class="campo" id="r-foto-campo" style="gap:8px" hidden><span>Foto, se ci sono</span>
+        <div class="foto-scelte" id="r-foto-anteprima"></div>
+        <label class="mini" style="align-self:flex-start;cursor:pointer;text-transform:none;letter-spacing:0">+ Foto<input type="file" accept="image/*" multiple id="r-foto" hidden></label>
+      </div>
     </div>
     <div data-tipo="idee" style="display:contents" hidden>
       <label class="campo">L'idea<textarea id="i-testo" maxlength="2000"></textarea></label>
@@ -347,6 +359,8 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
     </div>
   </form>
 </dialog>
+
+<dialog id="d-foto" aria-label="Foto"><img id="foto-grande" alt="Foto della reference"></dialog>
 
 <dialog id="d-bug" aria-label="Segnala un bug">
   <form class="foglio" id="m-bug-form">
@@ -510,7 +524,8 @@ function rigaVoce(k,v,pre){
   return el("div",{class:"riga"+(v.discussa?" spenta":""),style:`view-transition-name:${pre}-${v.id}`},
     tessera(v.da,{style:`--c:${P(v.da).c};--f:${P(v.da).f};--d:30px;border-radius:8px`}),
     el("div",{class:"corpo"},
-      el("div",{class:"nome"},v.testo),
+      v.testo?el("div",{class:"nome"},v.testo):null,
+      k==="reference"?fotine(v):null,
       el("div",{class:"meta"},
         u&&el("a",{href:u.href,target:"_blank",rel:"noopener noreferrer"},u.hostname.replace(/^www\./,"")+" ↗"),
         el("span",null,[v.da,giorno(v.creato)].filter(Boolean).join(" · "))),
@@ -706,7 +721,7 @@ $("b-piu").addEventListener("click",()=>{
   document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
   $("m-nuovo").reset();document.querySelector(`[name=tipo][value=${t}]`).checked=true;mostraTipo();
   if(vista==="squadra"&&filtro)$("t-chi").querySelector(`[value="${filtro}"]`).checked=true;
-  refsNuova=new Set();disegnaRefsNuova();
+  refsNuova=new Set();disegnaRefsNuova();fotoScelte=[];disegnaFotoScelte();
   $("foglio").showModal();
 });
 $("b-annulla").addEventListener("click",()=>$("foglio").close());
@@ -730,9 +745,14 @@ $("m-nuovo").addEventListener("submit",async e=>{
     ok=await aggiungi("task",{cosa,chi,entro:$("t-entro").value||null,fatto:false});
   }else if(t==="reference"){
     const grezzo=$("r-link").value.trim(), u=indirizzo(grezzo), testo=$("r-testo").value.trim();
-    if(!testo)return avvisoFoglio("Scrivi due righe su cos'è.");
+    if(!testo&&!fotoScelte.length)return avvisoFoglio(fotoPronte?"Scrivi due righe su cos'è, o aggiungi una foto.":"Scrivi due righe su cos'è.");
     if(grezzo&&!u)return avvisoFoglio("Il link non sembra un indirizzo web. Incollalo intero, oppure lascia il campo vuoto.");
-    ok=await aggiungi("reference",{link:u?u.href:"",testo,discussa:false});
+    $("b-salva").disabled=true;
+    try{
+      const foto=await caricaFoto(testo);
+      if(!foto)return;
+      ok=await aggiungi("reference",{link:u?u.href:"",testo,discussa:false,foto});
+    }finally{$("b-salva").disabled=false}
   }else{
     const testo=$("i-testo").value.trim();
     if(!testo)return avvisoFoglio("Scrivi l'idea.");
@@ -740,6 +760,68 @@ $("m-nuovo").addEventListener("submit",async e=>{
   }
   if(ok){$("foglio").close();const dove=t==="task"?($("t-chi").querySelector("input:checked")&&vista==="mio"?"mio":"squadra"):t;if(dove!==vista&&vista!=="mio")vai(dove)}
 });
+
+// ── le foto delle reference: la pagina le rimpicciolisce, il passacarte (functions/…/api/foto) le archivia nel Drive
+//    della squadra e le ridà solo a chi è nella squadra. Finché il collegamento a Google non c'è, il campo non si vede.
+const API="api/foto";
+let fotoPronte=false, fotoScelte=[];
+fetch(API+"/stato").then(r=>r.json()).then(j=>{fotoPronte=!!j.pronto;$("r-foto-campo").hidden=!fotoPronte}).catch(()=>{});
+const tokenSb=async()=>(await sb.auth.getSession()).data.session?.access_token||"";
+async function bitmap(f){
+  try{return await createImageBitmap(f,{imageOrientation:"from-image"})}
+  catch(e){const i=new Image();i.src=URL.createObjectURL(f);await i.decode();return i}
+}
+async function rimpicciolisci(f,lato,q){
+  const b=await bitmap(f), k=Math.min(1,lato/Math.max(b.width,b.height)), c=document.createElement("canvas");
+  c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);
+  return new Promise(r=>c.toBlob(r,"image/jpeg",q));
+}
+function disegnaFotoScelte(){
+  $("r-foto-anteprima").replaceChildren(...fotoScelte.map((f,i)=>el("button",{type:"button","aria-label":"Togli questa foto",
+    onclick:()=>{fotoScelte.splice(i,1);disegnaFotoScelte()}},el("img",{src:URL.createObjectURL(f),alt:""}))));
+}
+$("r-foto").addEventListener("change",e=>{fotoScelte=[...fotoScelte,...e.target.files].slice(0,6);e.target.value="";disegnaFotoScelte()});
+// carica una alla volta (grande 1600 px e miniatura 400 px); se una non passa la reference non si salva
+async function caricaFoto(testo){
+  const foto=[];
+  for(const [i,f] of fotoScelte.entries()){
+    avvisoFoglio(`Carico la foto ${i+1} di ${fotoScelte.length} sul Drive…`);
+    let r=null;
+    try{
+      const fd=new FormData();
+      fd.append("foto",await rimpicciolisci(f,1600,.82),"foto.jpg");
+      fd.append("mini",await rimpicciolisci(f,400,.7),"mini.jpg");
+      fd.append("nome",`${oggi()} ${io} ${(testo||"reference").slice(0,40)} ${i+1}`);
+      r=await fetch(API,{method:"POST",headers:{Authorization:"Bearer "+await tokenSb()},body:fd});
+    }catch(e){}
+    if(!r||!r.ok){avvisoFoglio("Una foto non è arrivata sul Drive: riprova fra poco. La reference non è ancora salvata.");return null}
+    foto.push(await r.json());
+  }
+  $("avviso-foglio").hidden=true;
+  return foto;
+}
+const urlFoto=new Map();
+function srcFoto(id){
+  if(!urlFoto.has(id))urlFoto.set(id,(async()=>{
+    const r=await fetch(API+"/"+id,{headers:{Authorization:"Bearer "+await tokenSb()}});
+    if(!r.ok)throw r.status;
+    return URL.createObjectURL(await r.blob());
+  })().catch(e=>{urlFoto.delete(id);throw e}));
+  return urlFoto.get(id);
+}
+function fotine(v){
+  if(!(v.foto||[]).length)return null;
+  return el("div",{class:"fotine"},v.foto.map(f=>{
+    const img=el("img",{alt:"Foto"});
+    srcFoto(f.mini).then(u=>img.src=u).catch(()=>{img.alt="Non più sul Drive"});
+    return el("button",{type:"button","aria-label":"Apri la foto",onclick:()=>apriFoto(f.id)},img);
+  }));
+}
+function apriFoto(id){
+  $("foto-grande").removeAttribute("src");$("d-foto").showModal();
+  srcFoto(id).then(u=>$("foto-grande").src=u).catch(()=>{$("d-foto").close();avvisa("Questa foto non è più sul Drive.")});
+}
+$("d-foto").addEventListener("click",()=>$("d-foto").close());
 
 // ── segnala un bug: diventa un compito per Giuseppe, con la scheda e il tipo di schermo per ritrovarlo ──
 function apriBug(){$("m-bug-form").reset();$("avviso-bug").hidden=true;$("d-bug").showModal()}
@@ -832,7 +914,7 @@ function componi(){
   titolo("E se...?",`Idee da discutere  ${idee.length}`);
   idee.length?idee.forEach(v=>voce({testo:v.testo,da:v.da,sotto:chiE(v),refs:(v.refs||[]).map(id=>dati.reference.find(r=>r.id===id)).filter(Boolean)})):niente("Nessuna idea nuova.");
   y+=4;titolo("Cosa avete visto?",`Reference nuove  ${ref.length}`);
-  ref.length?ref.forEach(v=>voce({testo:v.testo,da:v.da,sotto:chiE(v),link:(indirizzo(v.link)||{}).href})):niente("Nessuna reference nuova.");
+  ref.length?ref.forEach(v=>voce({testo:v.testo||"(foto)",da:v.da,sotto:chiE(v)+((v.foto||[]).length?`  ·  ${v.foto.length} foto sul Drive`:""),link:(indirizzo(v.link)||{}).href})):niente("Nessuna reference nuova.");
   y+=4;titolo("Chi fa cosa?",`Compiti aperti  ${comp.length}`);
   if(!comp.length)niente("Nessun compito aperto.");
   for(const p of NOMI){
