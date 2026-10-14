@@ -279,6 +279,12 @@ html.cambio::view-transition-old(vista){animation:esce var(--t1) var(--e-out) bo
 html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) both}
 ::view-transition-group(pill){animation-duration:var(--t3);animation-timing-function:cubic-bezier(.2,.9,.25,1.08)}
 
+/* versione leggera: niente movimento, sfondo, sfocature e ombre grandi, per i computer lenti */
+html.leggera *,html.leggera *::before,html.leggera *::after{animation:none!important;transition:none!important;will-change:auto!important}
+html.leggera ::view-transition-group(*),html.leggera ::view-transition-old(*),html.leggera ::view-transition-new(*){animation:none!important}
+html.leggera .sfondo{display:none}
+html.leggera .testa,html.leggera .schede{background:var(--fondo);-webkit-backdrop-filter:none;backdrop-filter:none}
+html.leggera .carta,html.leggera .piu,html.leggera [popover]{box-shadow:none}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
   ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
@@ -326,6 +332,7 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
 <div popover id="menu">
   <button type="button" id="m-pdf">Scarica il PDF per la riunione</button>
   <button type="button" id="m-bug">Segnala un bug</button>
+  <button type="button" id="m-leggera"></button>
   <button type="button" id="m-esci">Esci</button>
 </div>
 <button class="piu" id="b-piu" aria-label="Aggiungi" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg></button>
@@ -393,7 +400,14 @@ html.cambio::view-transition-new(vista){animation:entra var(--t3) var(--e-in) bo
   </form>
 </dialog>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// se dopo 5 secondi non si è aperto né l'ingresso né la pagina, passa alla versione leggera (e se la ricorda)
+(()=>{const h=document.documentElement;
+try{if(localStorage.getItem("bs-leggera")==="1"||/[?&]leggera/.test(location.search))h.classList.add("leggera")}catch(e){}
+setTimeout(()=>{if(h.classList.contains("leggera"))return;
+  if(["v-ingresso","v-app"].some(i=>{const n=document.getElementById(i);return n&&!n.hidden}))return;
+  h.classList.add("leggera");try{localStorage.setItem("bs-leggera","1")}catch(e){}},5000)})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 // arrivati dal link di invito o di recupero: prima si sceglie la password (si legge prima che il client pulisca l'indirizzo)
@@ -445,7 +459,13 @@ const TIPI={task:"compito",reference:"reference",idee:"idea"};
 
 const dati={task:[],reference:[],idee:[]}, pronto={};
 let io="", uid="", prima=null, viste=new Set(), filtro="", vista=SCHEDE[location.hash.slice(1)]?location.hash.slice(1):"mio";
-const ridotto=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const sistemaRidotto=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let ridotto=sistemaRidotto||document.documentElement.classList.contains("leggera");
+function leggera(on){
+  document.documentElement.classList.toggle("leggera",on);ridotto=sistemaRidotto||on;
+  try{on?localStorage.setItem("bs-leggera","1"):localStorage.removeItem("bs-leggera")}catch(e){}
+  if(!$("v-app").hidden)disegna();
+}
 
 const $=id=>document.getElementById(id);
 function el(tag,attrs,...figli){
@@ -507,6 +527,8 @@ function disegnaSchede(){
     el("div",{class:"lato azioni-lato"},
       el("button",{type:"button",class:"btn",onclick:scaricaPdf},"PDF riunione"),
       el("button",{type:"button",class:"link",onclick:apriBug},"Segnala un bug"),
+      el("button",{type:"button",class:"link",onclick:()=>leggera(!document.documentElement.classList.contains("leggera"))},
+        document.documentElement.classList.contains("leggera")?"Versione leggera: sì":"Versione leggera: no"),
       el("button",{type:"button",class:"btn",onclick:()=>sb.auth.signOut()},"Esci")));
 }
 
@@ -985,11 +1007,17 @@ function componi(){
     doc.text("BARI SPARSA  ·  GESTIONE INTERNA",L,290);doc.text(`${i} / ${n}`,L+W,290,{align:"right"})}
   return doc;
 }
-function scaricaPdf(){
-  try{componi().save("Bari Sparsa - verso la riunione "+oggi()+".pdf")}
+let caricaPdf=null;
+const libreriaPdf=()=>window.jspdf?Promise.resolve():caricaPdf||(caricaPdf=new Promise((ok,no)=>{
+  const sc=el("script",{src:"https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"});
+  sc.onload=ok;sc.onerror=()=>{caricaPdf=null;no()};document.head.append(sc)}));
+async function scaricaPdf(){
+  try{await libreriaPdf();componi().save("Bari Sparsa - verso la riunione "+oggi()+".pdf")}
   catch(e){avvisa("Il PDF non è stato scaricato. Riprova fra qualche secondo.")}
 }
 $("m-pdf").addEventListener("click",()=>{$("menu").hidePopover();scaricaPdf()});
+$("m-leggera").addEventListener("click",()=>{$("menu").hidePopover();leggera(!document.documentElement.classList.contains("leggera"))});
+$("menu").addEventListener("beforetoggle",()=>{$("m-leggera").textContent="Versione leggera: "+(document.documentElement.classList.contains("leggera")?"sì":"no")});
 $("m-esci").addEventListener("click",()=>{$("menu").hidePopover();sb.auth.signOut()});
 
 // ── l'ingresso ──
