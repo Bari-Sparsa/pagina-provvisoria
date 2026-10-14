@@ -437,9 +437,10 @@ const BLOCCHI=[[240.19,0],[269.73,26.07],[301.02,50.4],[304.17,125.74],[347.63,1
 const blocchi=()=>BLOCCHI.map(([x,y],i)=>`<rect style="--i:${i}" x="${x}" y="${y}" width="59.97" height="59.97" rx="9"/>`).join("");
 const simbolo=()=>`<g transform="translate(70 0) skewX(-14)"><g class="bordo">${blocchi()}</g><g class="riempi">${blocchi()}</g></g>`;
 
-const SCHEDE={mio:"Il mio spazio",squadra:"Squadra",reference:"Reference",idee:"Idee"};
+const SCHEDE={mio:"Il mio spazio",squadra:"Squadra",reference:"Reference",idee:"Idee",decisioni:"Decisioni"};
 const VUOTO={reference:"Qui finiscono le reference che vedete in giro: un link e due righe su cos'è.",
-  idee:"Nessuna idea ancora. Scrivi la prima: la vede tutta la squadra."};
+  idee:"Nessuna idea ancora. Scrivi la prima: la vede tutta la squadra.",
+  decisioni:"Nessuna decisione ancora. Quando un'idea è discussa e approvata, passa qui."};
 const TIPI={task:"compito",reference:"reference",idee:"idea"};
 
 const dati={task:[],reference:[],idee:[]}, pronto={};
@@ -495,7 +496,7 @@ function aggiorna(cambiaVista){
 }
 function vai(k){if(k===vista)return;vista=k;filtro="";cerca.value="";history.replaceState(null,"","#"+k);aggiorna(true);scrollTo({top:0})}
 
-const ICONA_SCHEDA={mio:null,squadra:"comunita",reference:"digital",idee:"creativita"};
+const ICONA_SCHEDA={mio:null,squadra:"comunita",reference:"digital",idee:"creativita",decisioni:"futuro"};
 function disegnaSchede(){
   const conta={mio:aperti().filter(t=>(t.chi||[]).includes(io)).length,squadra:0,reference:nuove("reference").length,idee:nuove("idee").length};
   $("schede").replaceChildren(
@@ -532,11 +533,24 @@ function rigaVoce(k,v,pre){
       k==="reference"?allegati(v):null,
       el("div",{class:"meta"},
         u&&el("a",{href:u.href,target:"_blank",rel:"noopener noreferrer"},u.hostname.replace(/^www\./,"")+" ↗"),
-        el("span",null,[v.da,giorno(v.creato)].filter(Boolean).join(" · "))),
+        el("span",null,[v.da,giorno(v.creato),v.esito==="approvata"&&v.deciso?"approvata il "+giorno(v.deciso):null].filter(Boolean).join(" · "))),
       k==="idee"?agganci(v):null),
-    el("div",{class:"gesti"},
+    el("div",{class:"gesti"},k==="idee"?esitoIdea(v):
       el("button",{type:"button",class:"mini","aria-pressed":String(!!v.discussa),onclick:()=>cambia(k,v,{discussa:!v.discussa})},v.discussa?"Discussa":"Discussa?"),
       elimina(k,v)));
+}
+// idea discussa: si sceglie l'esito. Approvata passa in Decisioni, rifiutata resta in Idee, spenta.
+let sceglie=null;
+function esitoIdea(v){
+  const decidi=esito=>{sceglie=null;cambia("idee",v,{discussa:true,esito,deciso:new Date().toISOString()})};
+  const riapri=()=>{sceglie=null;cambia("idee",v,{discussa:false,esito:null,deciso:null})};
+  if(v.esito==="approvata")return el("button",{type:"button",class:"mini","aria-pressed":"true",onclick:riapri},"Riapri");
+  if(sceglie===v.id)return [
+    el("button",{type:"button",class:"mini",onclick:()=>decidi("approvata")},"Approvata"),
+    el("button",{type:"button",class:"mini",onclick:()=>decidi("rifiutata")},"Rifiutata"),
+    el("button",{type:"button",class:"mini",onclick:()=>{sceglie=null;aggiorna()}},"Annulla")];
+  if(v.esito==="rifiutata")return el("button",{type:"button",class:"mini","aria-pressed":"true",title:"Tocca per riaprirla",onclick:riapri},"Rifiutata");
+  return el("button",{type:"button",class:"mini","aria-pressed":String(!!v.discussa),onclick:()=>{sceglie=v.id;aggiorna()}},v.discussa?"Discussa":"Discussa?");
 }
 function elimina(k,v){
   return el("button",{type:"button",class:"via","aria-label":"Elimina",onclick:e=>{
@@ -650,12 +664,13 @@ const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u03
 const trova=(v,q)=>!q||norm([v.testo,v.link,v.da].join(" ")).includes(norm(q));
 function vistaVoci(k){
   const q=cerca.value.trim();
-  cerca.placeholder=k==="reference"?"Cerca fra le reference…":"Cerca fra le idee…";
-  const v=[...dati[k]].filter(x=>trova(x,q)).sort((a,b)=>(!!a.discussa-!!b.discussa)||recenti(a,b));
+  cerca.placeholder=k==="reference"?"Cerca fra le reference…":k==="decisioni"?"Cerca fra le decisioni…":"Cerca fra le idee…";
+  const dec=k==="decisioni", tab=dec?"idee":k;
+  const v=dati[tab].filter(x=>dec?x.esito==="approvata":x.esito!=="approvata").filter(x=>trova(x,q)).sort(dec?(a,b)=>String(b.deciso||"").localeCompare(String(a.deciso||"")):(a,b)=>(!!a.discussa-!!b.discussa)||recenti(a,b));
   return [
-    k==="reference"?tit("Cosa avete visto?","Reference","h1"):tit("E se...?","Idee","h1"),
-    dati[k].length?cerca:null,
-    caricoOVuoto(k,v.map(x=>rigaVoce(k,x,k[0])),q?`Niente che corrisponda a «${q}».`:VUOTO[k]),
+    k==="reference"?tit("Cosa avete visto?","Reference","h1"):dec?tit("Cosa abbiamo scelto?","Decisioni","h1"):tit("E se...?","Idee","h1"),
+    dati[tab].length?cerca:null,
+    caricoOVuoto(tab,v.map(x=>rigaVoce(tab,x,k[0])),q?`Niente che corrisponda a «${q}».`:VUOTO[k]),
   ];
 }
 
